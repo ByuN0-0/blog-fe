@@ -92,3 +92,92 @@ export async function getAdminMe() {
 
   return data;
 }
+
+export type PostStatus = "draft" | "published" | "private";
+
+export type Post = {
+  id: string;
+  title: string;
+  slug: string;
+  summary: string;
+  content: string;
+  status: PostStatus;
+  category: string;
+  tags: string[];
+  coverImage: string;
+  views: number;
+  likes: number;
+  publishedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type Comment = {
+  id: string;
+  postId: string;
+  postSlug: string;
+  author: string;
+  content: string;
+  status: "visible" | "hidden";
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type PostPayload = {
+  title: string;
+  slug: string;
+  summary: string;
+  content: string;
+  status: PostStatus;
+  category: string;
+  tags: string[];
+  coverImage: string;
+};
+
+export async function getAdminPosts() {
+  const { data } = await api.get<{ posts: Post[] }>("/api/v1/admin/posts");
+
+  return data.posts;
+}
+
+export async function getAdminPost(id: string) {
+  const { data } = await api.get<Post>(`/api/v1/admin/posts/${id}`);
+
+  return data;
+}
+
+export async function createAdminPost(payload: PostPayload) {
+  const { data } = await api.post<Post>("/api/v1/admin/posts", payload);
+
+  return data;
+}
+
+export async function updateAdminPost(id: string, payload: PostPayload) {
+  const { data } = await api.put<Post>(`/api/v1/admin/posts/${id}`, payload);
+
+  return data;
+}
+
+export async function deleteAdminPost(id: string) {
+  await api.delete(`/api/v1/admin/posts/${id}`);
+}
+
+export async function getAdminComments() {
+  const { data } = await api.get<{ comments: Comment[] }>(
+    "/api/v1/admin/comments",
+  );
+
+  return data.comments;
+}
+
+export async function hideAdminComment(id: string) {
+  const { data } = await api.patch<Comment>(
+    `/api/v1/admin/comments/${id}/hide`,
+  );
+
+  return data;
+}
+
+export async function deleteAdminComment(id: string) {
+  await api.delete(`/api/v1/admin/comments/${id}`);
+}
