@@ -4,19 +4,34 @@ import Link from "next/link";
 import { useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
-import { Edit, EyeOff, LogOut, Plus, ShieldCheck, Trash2 } from "lucide-react";
+import {
+  AlertTriangle,
+  CheckCircle2,
+  CircleDashed,
+  Database,
+  Edit,
+  EyeOff,
+  LogOut,
+  Plus,
+  RefreshCw,
+  ShieldCheck,
+  Trash2,
+} from "lucide-react";
 import { toast } from "sonner";
 
 import { Button, buttonVariants } from "@/components/ui/button";
 import {
   deleteAdminComment,
   deleteAdminPost,
+  getAdminDependencies,
   getAdminComments,
   getAdminMe,
   getAdminPosts,
   hideAdminComment,
   logout,
   type Comment,
+  type DependenciesReport,
+  type DependencyStatus,
   type Post,
 } from "@/lib/api";
 import { cn } from "@/lib/utils";
@@ -38,6 +53,11 @@ export default function AdminDashboardPage() {
     queryKey: ["admin", "comments"],
     queryFn: getAdminComments,
     enabled: !meQuery.isError,
+  });
+  const dependenciesQuery = useQuery({
+    queryKey: ["admin", "dependencies"],
+    queryFn: getAdminDependencies,
+    enabled: meQuery.isSuccess,
   });
 
   const deletePostMutation = useMutation({
@@ -157,6 +177,13 @@ export default function AdminDashboardPage() {
           />
         </div>
 
+        <DependenciesPanel
+          isError={dependenciesQuery.isError}
+          isFetching={dependenciesQuery.isFetching}
+          onRefresh={() => dependenciesQuery.refetch()}
+          report={dependenciesQuery.data}
+        />
+
         <section className="space-y-4">
           <div className="flex items-center justify-between gap-4">
             <h2 className="text-xl font-semibold">글 관리</h2>
@@ -227,6 +254,163 @@ function StatCard({ label, value }: { label: string; value: number }) {
       <p className="mt-3 text-3xl font-semibold">{value}</p>
     </article>
   );
+}
+
+function DependenciesPanel({
+  isError,
+  isFetching,
+  onRefresh,
+  report,
+}: {
+  isError: boolean;
+  isFetching: boolean;
+  onRefresh: () => void;
+  report?: DependenciesReport;
+}) {
+  const dependencies = report
+    ? [
+        ["MySQL", report.mysql],
+        ["ADW", report.adw],
+        ["JSON DB", report.ajd],
+      ] as const
+    : [];
+
+  return (
+    <section className="mb-10 space-y-4">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-2">
+          <Database className="size-5 text-muted-foreground" />
+          <h2 className="text-xl font-semibold">연결 상태</h2>
+        </div>
+        <Button
+          disabled={isFetching}
+          onClick={onRefresh}
+          size="sm"
+          variant="outline"
+        >
+          <RefreshCw className={cn("size-4", isFetching && "animate-spin")} />
+          새로고침
+        </Button>
+      </div>
+
+      {isError ? (
+        <div className="rounded-lg border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive">
+          연결 상태를 불러오지 못했습니다.
+        </div>
+      ) : null}
+
+      <div className="grid gap-3 md:grid-cols-3">
+        {dependencies.length > 0
+          ? dependencies.map(([label, dependency]) => (
+              <DependencyCard dependency={dependency} key={label} label={label} />
+            ))
+          : ["MySQL", "ADW", "JSON DB"].map((label) => (
+              <DependencySkeleton isFetching={isFetching} key={label} label={label} />
+            ))}
+      </div>
+    </section>
+  );
+}
+
+function DependencyCard({
+  dependency,
+  label,
+}: {
+  dependency: DependencyStatus;
+  label: string;
+}) {
+  const state = getDependencyState(dependency);
+  const detail = dependency.database || dependency.service || "-";
+
+  return (
+    <article className="rounded-lg border bg-card p-4">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <h3 className="font-medium">{label}</h3>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {dependency.host || "-"}:{dependency.port || "-"}
+          </p>
+        </div>
+        <span
+          className={cn(
+            "inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs font-medium",
+            state.className,
+          )}
+        >
+          <state.Icon className="size-3.5" />
+          {state.label}
+        </span>
+      </div>
+      <dl className="mt-4 space-y-2 text-sm">
+        <div className="flex justify-between gap-3">
+          <dt className="text-muted-foreground">
+            {dependency.database ? "Database" : "Service"}
+          </dt>
+          <dd className="truncate font-medium">{detail}</dd>
+        </div>
+        <div className="flex justify-between gap-3">
+          <dt className="text-muted-foreground">Latency</dt>
+          <dd className="font-medium">
+            {dependency.latencyMs === undefined
+              ? "-"
+              : `${dependency.latencyMs}ms`}
+          </dd>
+        </div>
+      </dl>
+      {dependency.error ? (
+        <p className="mt-3 line-clamp-2 text-xs leading-5 text-destructive">
+          {dependency.error}
+        </p>
+      ) : null}
+    </article>
+  );
+}
+
+function DependencySkeleton({
+  isFetching,
+  label,
+}: {
+  isFetching: boolean;
+  label: string;
+}) {
+  return (
+    <article className="rounded-lg border bg-card p-4">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <h3 className="font-medium">{label}</h3>
+          <p className="mt-1 text-sm text-muted-foreground">-</p>
+        </div>
+        <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-1 text-xs font-medium text-muted-foreground">
+          <CircleDashed className={cn("size-3.5", isFetching && "animate-spin")} />
+          확인 중
+        </span>
+      </div>
+      <div className="mt-4 h-12 rounded-md bg-muted/40" />
+    </article>
+  );
+}
+
+function getDependencyState(dependency: DependencyStatus) {
+  if (!dependency.configured) {
+    return {
+      Icon: CircleDashed,
+      className: "bg-muted text-muted-foreground",
+      label: "미설정",
+    };
+  }
+  if (dependency.ok) {
+    return {
+      Icon: CheckCircle2,
+      className: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300",
+      label: "정상",
+    };
+  }
+
+  return {
+    Icon: AlertTriangle,
+    className: "bg-destructive/10 text-destructive",
+    label: "실패",
+  };
 }
 
 function PostRow({ onDelete, post }: { onDelete: () => void; post: Post }) {

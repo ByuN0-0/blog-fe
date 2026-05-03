@@ -93,6 +93,32 @@ export async function getAdminMe() {
   return data;
 }
 
+export type DependencyStatus = {
+  name: "mysql" | "adw" | "ajd";
+  configured: boolean;
+  ok: boolean;
+  latencyMs?: number;
+  host?: string;
+  port?: number;
+  database?: string;
+  service?: string;
+  error?: string;
+};
+
+export type DependenciesReport = {
+  mysql: DependencyStatus;
+  adw: DependencyStatus;
+  ajd: DependencyStatus;
+};
+
+export async function getAdminDependencies() {
+  const { data } = await api.get<DependenciesReport>(
+    "/api/v1/admin/dependencies",
+  );
+
+  return data;
+}
+
 export type PostStatus = "draft" | "published" | "private";
 
 export type Post = {
