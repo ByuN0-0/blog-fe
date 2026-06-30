@@ -15,7 +15,7 @@ export function MarkdownContent({ content }: MarkdownContentProps) {
           const Heading = `h${block.level}` as "h2" | "h3";
           return (
             <Heading
-              className="pt-4 text-2xl font-semibold leading-tight text-[#211b13]"
+              className="pt-4 text-2xl font-semibold leading-tight text-[#211b13] first:pt-0"
               key={index}
             >
               {block.value}

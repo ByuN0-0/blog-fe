@@ -121,7 +121,7 @@ export default function PostDetailPage() {
           post={post}
         />
 
-        <section className="mt-8 rounded-md border border-[#d7d0c1] bg-[#fffdf7]/94 p-5 md:p-8">
+        <section className="mt-8">
           <MarkdownContent content={post.content} />
         </section>
       </article>
