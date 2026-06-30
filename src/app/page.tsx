@@ -1,379 +1,338 @@
+/* eslint-disable @next/next/no-img-element */
+"use client";
+
 import Link from "next/link";
+import { useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import {
   ArrowUpRight,
+  BookOpen,
+  BriefcaseBusiness,
   Code2,
-  Cpu,
-  GitBranch,
-  Monitor,
-  PenLine,
+  Eye,
+  Heart,
+  Map,
+  MessageCircle,
   Terminal,
 } from "lucide-react";
 
-const navItems = [
-  { label: "Writing", href: "#writing" },
-  { label: "Build log", href: "#build-log" },
-  { label: "Notes", href: "#notes" },
-  { label: "About", href: "#about" },
-];
+import {
+  BLOG_CATEGORIES,
+  getPublishedPosts,
+  type BlogCategory,
+  type Post,
+} from "@/lib/api";
+import { cn } from "@/lib/utils";
 
-const terminalLines = [
-  "$ pnpm dev-blog init",
-  "loading essays from /notes",
-  "mounting tech reviews, dev diary, build logs",
-  "status: writing system ready",
-];
-
-const systemStats = [
-  { label: "Stack", value: "Next.js / Go / Gin" },
-  { label: "Mode", value: "Ship, review, write" },
-  { label: "Archive", value: "Tech notes and build logs" },
-];
-
-const writingTracks = [
-  {
-    label: "Tech Review",
-    description: "직접 써본 기술과 도구를 판단 기준 중심으로 리뷰합니다.",
+const categoryMeta: Record<
+  BlogCategory,
+  { icon: typeof Map; description: string }
+> = {
+  라이프로그: {
+    icon: Map,
+    description: "여행, 일상, 경험을 남기는 개인 기록",
+  },
+  "북 노트": {
+    icon: BookOpen,
+    description: "책을 읽고 오래 가져갈 생각을 정리",
+  },
+  "기술 노트": {
     icon: Code2,
-    command: "cat reviews/*.md",
+    description: "개발 기록, 기술 리뷰, 시행착오",
   },
-  {
-    label: "Dev Diary",
-    description: "개발 중 배운 것, 막혔던 지점, 생각의 변화를 기록합니다.",
-    icon: PenLine,
-    command: "tail -f diary.log",
+  비즈니스: {
+    icon: BriefcaseBusiness,
+    description: "사업 아이디어, 시장 관찰, 제품화 과정",
   },
-  {
-    label: "Build Log",
-    description: "제품을 만들고 사업으로 연결하는 과정을 남깁니다.",
-    icon: GitBranch,
-    command: "git log --oneline",
-  },
-];
-
-const buildNotes = [
-  {
-    label: "Personal dev blog",
-    detail: "글쓰기, 관리자, API 연동을 제품처럼 다듬는 중",
-  },
-  {
-    label: "Go/Gin backend",
-    detail: "인증, 글 관리, 댓글 흐름을 단단하게 연결",
-  },
-  {
-    label: "Next.js writing system",
-    detail: "읽기 좋은 화면과 관리하기 쉬운 구조를 함께 설계",
-  },
-  {
-    label: "SaaS experiments",
-    detail: "작게 만들고 빠르게 검증한 내용을 기록",
-  },
-];
-
-const notes = [
-  {
-    category: "Build Log",
-    title: "개발자가 자기 블로그를 직접 만드는 이유",
-    excerpt:
-      "기술 리뷰, 개발 일기, 사업 기록을 한 공간에 쌓기 위해 블로그의 첫 구조를 설계하고 있다.",
-    date: "2026.04.30",
-    id: "001",
-  },
-  {
-    category: "Tech Review",
-    title: "Next.js로 개인 블로그를 만들 때 먼저 정해야 할 것들",
-    excerpt: "라우팅, SEO, 관리자 페이지, API 연동의 기준을 먼저 잡아본다.",
-    date: "2026.04.30",
-    id: "002",
-  },
-  {
-    category: "Dev Diary",
-    title: "유명한 개발 블로그가 되고 싶다는 생각",
-    excerpt:
-      "기술력, 꾸준함, 개인적인 목소리 사이의 균형을 어떻게 만들지 고민한다.",
-    date: "2026.04.30",
-    id: "003",
-  },
-];
+};
 
 export default function Home() {
+  const [selectedCategory, setSelectedCategory] =
+    useState<BlogCategory | "all">("all");
+  const postsQuery = useQuery({
+    queryKey: ["posts", "published"],
+    queryFn: getPublishedPosts,
+  });
+
+  const posts = useMemo(() => postsQuery.data ?? [], [postsQuery.data]);
+  const filteredPosts = useMemo(() => {
+    if (selectedCategory === "all") {
+      return posts;
+    }
+    return posts.filter((post) => post.category === selectedCategory);
+  }, [posts, selectedCategory]);
+
+  const featuredPost = filteredPosts[0];
+  const totalViews = posts.reduce((sum, post) => sum + post.views, 0);
+  const totalLikes = posts.reduce((sum, post) => sum + post.likes, 0);
+
   return (
-    <main className="min-h-screen bg-[#f4f4f2] text-[#111111]">
-      <header className="sticky top-0 z-20 border-b border-[#c8c8c2] bg-[#f4f4f2]/92 backdrop-blur">
-        <div className="mx-auto flex h-16 w-full max-w-7xl items-center justify-between px-5 lg:px-10">
+    <main className="min-h-screen bg-[#f5f2ec] text-[#191714]">
+      <header className="sticky top-0 z-20 border-b border-[#d4cec2] bg-[#f5f2ec]/90 backdrop-blur">
+        <div className="mx-auto flex h-16 w-full max-w-6xl items-center justify-between px-5">
           <Link
             className="inline-flex items-center gap-2 font-mono text-sm font-semibold"
             href="/"
           >
-            <span className="flex size-7 items-center justify-center rounded-md border border-[#1f1f1f] bg-[#111111] text-[#f4f4f2]">
+            <span className="flex size-8 items-center justify-center rounded-md bg-[#182824] text-[#f7f3ea]">
               <Terminal className="size-4" />
             </span>
-            dev.build.notes
+            biyeon.log
           </Link>
-          <nav className="hidden items-center gap-1 font-mono text-xs md:flex">
-            {navItems.map((item) => (
-              <a
-                className="rounded-md px-3 py-2 text-[#555555] transition-colors hover:bg-[#111111] hover:text-[#f4f4f2]"
-                href={item.href}
-                key={item.label}
-              >
-                /{item.label.toLowerCase().replaceAll(" ", "-")}
-              </a>
-            ))}
-          </nav>
+          <Link
+            className="rounded-md border border-[#b9b09f] px-3 py-2 text-sm text-[#4a453b] transition-colors hover:bg-white"
+            href="/admin"
+          >
+            Admin
+          </Link>
         </div>
       </header>
 
-      <section className="mx-auto grid w-full max-w-7xl gap-10 px-5 pb-14 pt-12 lg:grid-cols-[0.95fr_1.05fr] lg:px-10 lg:pb-20 lg:pt-20">
-        <div className="flex flex-col justify-between gap-10">
-          <div>
-            <div className="inline-flex items-center gap-2 rounded-md border border-[#b8b8b2] bg-[#e8e8e4] px-3 py-2 font-mono text-xs text-[#4b4b4b]">
-              <span className="size-2 rounded-full bg-[#2f7d4f]" />
-              Developer / Maker / Builder
-            </div>
-            <h1 className="mt-7 max-w-3xl text-5xl font-semibold leading-none sm:text-6xl lg:text-7xl">
-              Software notes from a terminal-minded builder.
-            </h1>
-            <p className="mt-6 max-w-xl text-lg leading-8 text-[#4a4a4a]">
-              기술을 직접 써보고, 제품을 만들고, 그 과정에서 배운 판단을
-              오래 남기는 개인 개발 블로그입니다.
-            </p>
-          </div>
-
-          <div className="flex flex-wrap gap-3">
-            <a
-              className="inline-flex h-11 items-center gap-2 rounded-md bg-[#111111] px-4 font-mono text-sm font-medium text-[#f4f4f2] transition-transform hover:-translate-y-0.5"
-              href="#notes"
-            >
-              최근 글 보기
-              <ArrowUpRight className="size-4" />
-            </a>
-            <a
-              className="inline-flex h-11 items-center gap-2 rounded-md border border-[#9f9f98] bg-[#eeeeeb] px-4 font-mono text-sm font-medium text-[#222222] transition-colors hover:bg-white"
-              href="#build-log"
-            >
-              빌드 로그
-              <GitBranch className="size-4" />
-            </a>
-          </div>
-        </div>
-
-        <div className="rounded-lg border border-[#1f1f1f] bg-[#d7d7d2] shadow-[8px_8px_0_#111111]">
-          <div className="flex h-10 items-center justify-between border-b border-[#1f1f1f] bg-[#c9c9c3] px-4">
-            <div className="flex gap-2">
-              <span className="size-3 rounded-full border border-[#1f1f1f] bg-[#f4f4f2]" />
-              <span className="size-3 rounded-full border border-[#1f1f1f] bg-[#b8b8b2]" />
-              <span className="size-3 rounded-full border border-[#1f1f1f] bg-[#8f8f88]" />
-            </div>
-            <span className="font-mono text-xs text-[#333333]">
-              dev-build-notes.local
-            </span>
-          </div>
-
-          <div className="grid gap-4 p-4 lg:grid-cols-[1fr_260px]">
-            <div className="min-h-[360px] rounded-md border border-[#2b2b2b] bg-[#111111] p-5 font-mono text-sm text-[#e8e8e4]">
-              <div className="mb-5 flex items-center gap-2 text-[#9f9f98]">
-                <Terminal className="size-4" />
-                <span>terminal</span>
-              </div>
-              <div className="space-y-4">
-                {terminalLines.map((line, index) => (
-                  <p key={line}>
-                    <span className="text-[#7fd08a]">
-                      {index === 0 ? ">" : "ok"}
-                    </span>{" "}
-                    {line}
-                  </p>
-                ))}
-              </div>
-              <div className="mt-10 border-t border-[#3a3a3a] pt-5">
-                <p className="text-[#b9b9b4]">next task</p>
-                <p className="mt-2 text-2xl font-semibold leading-tight text-white">
-                  write useful notes, ship useful software
-                </p>
-              </div>
-            </div>
-
-            <aside className="grid gap-4">
-              <div className="rounded-md border border-[#9f9f98] bg-[#eeeeeb] p-4">
-                <div className="flex items-center gap-2 font-mono text-xs text-[#555555]">
-                  <Cpu className="size-4" />
-                  system status
-                </div>
-                <dl className="mt-4 space-y-4">
-                  {systemStats.map((item) => (
-                    <div key={item.label}>
-                      <dt className="font-mono text-xs text-[#696963]">
-                        {item.label}
-                      </dt>
-                      <dd className="mt-1 text-sm font-semibold text-[#191919]">
-                        {item.value}
-                      </dd>
-                    </div>
-                  ))}
-                </dl>
-              </div>
-
-              <div className="rounded-md border border-[#9f9f98] bg-[#f8f8f5] p-4">
-                <div className="flex items-center gap-2 font-mono text-xs text-[#555555]">
-                  <Monitor className="size-4" />
-                  current screen
-                </div>
-                <div className="mt-4 grid grid-cols-5 gap-1">
-                  {Array.from({ length: 30 }).map((_, index) => (
-                    <span
-                      className="h-5 rounded-sm border border-[#c8c8c2] bg-[#e0e0dc]"
-                      key={index}
-                    />
-                  ))}
-                </div>
-              </div>
-            </aside>
-          </div>
-        </div>
-      </section>
-
-      <section className="border-y border-[#c8c8c2] bg-[#111111] py-3 text-[#f4f4f2]">
-        <div className="mx-auto flex w-full max-w-7xl gap-8 overflow-hidden px-5 font-mono text-xs lg:px-10">
-          <span>tech reviews</span>
-          <span>build logs</span>
-          <span>dev diary</span>
-          <span>business notes</span>
-          <span>writing system</span>
-        </div>
-      </section>
-
-      <section
-        className="mx-auto w-full max-w-7xl px-5 py-14 lg:px-10 lg:py-20"
-        id="writing"
-      >
-        <div className="mb-8 flex flex-col justify-between gap-4 border-b border-[#b8b8b2] pb-5 md:flex-row md:items-end">
-          <div>
-            <p className="font-mono text-xs text-[#696963]">/writing-system</p>
-            <h2 className="mt-3 text-4xl font-semibold leading-tight sm:text-5xl">
-              글은 정보보다 판단을 남기기 위해 씁니다.
-            </h2>
-          </div>
-          <p className="max-w-md text-base leading-7 text-[#555555]">
-            리뷰, 일기, 빌드 로그를 같은 기준으로 정리해 다시 꺼내볼 수 있는
-            기록으로 남깁니다.
+      <section className="mx-auto grid w-full max-w-6xl gap-10 px-5 py-12 lg:grid-cols-[1.05fr_0.95fr] lg:py-16">
+        <div>
+          <p className="font-mono text-xs font-medium uppercase tracking-[0.16em] text-[#3f6f5d]">
+            Life, books, code, business
           </p>
+          <h1 className="mt-5 max-w-3xl text-5xl font-semibold leading-none text-[#171411] sm:text-6xl">
+            직접 겪고 읽고 만들며 배운 것을 기록합니다.
+          </h1>
+          <p className="mt-6 max-w-2xl text-lg leading-8 text-[#5b554b]">
+            라이프로그, 북 노트, 기술 노트, 비즈니스를 한 곳에 쌓는 개인
+            블로그입니다.
+          </p>
+
+          <div className="mt-8 grid gap-3 sm:grid-cols-3">
+            <Stat label="글" value={posts.length} />
+            <Stat label="조회" value={totalViews} />
+            <Stat label="좋아요" value={totalLikes} />
+          </div>
         </div>
 
-        <div className="grid gap-4 md:grid-cols-3">
-          {writingTracks.map((track) => (
-            <article
-              className="rounded-lg border border-[#b8b8b2] bg-[#eeeeeb] p-5"
-              key={track.label}
-            >
-              <div className="flex items-center justify-between gap-4">
-                <div className="flex size-10 items-center justify-center rounded-md border border-[#1f1f1f] bg-[#111111] text-[#f4f4f2]">
-                  <track.icon className="size-5" />
-                </div>
-                <span className="font-mono text-xs text-[#696963]">
-                  {track.command}
-                </span>
-              </div>
-              <h3 className="mt-6 text-2xl font-semibold">{track.label}</h3>
-              <p className="mt-3 text-[15px] leading-7 text-[#555555]">
-                {track.description}
-              </p>
-            </article>
+        <FeaturedPost isLoading={postsQuery.isLoading} post={featuredPost} />
+      </section>
+
+      <section className="border-y border-[#d4cec2] bg-[#fffdf8]">
+        <div className="mx-auto grid w-full max-w-6xl gap-3 px-5 py-5 md:grid-cols-5">
+          <CategoryButton
+            active={selectedCategory === "all"}
+            label="전체"
+            onClick={() => setSelectedCategory("all")}
+          />
+          {BLOG_CATEGORIES.map((category) => (
+            <CategoryButton
+              active={selectedCategory === category}
+              key={category}
+              label={category}
+              onClick={() => setSelectedCategory(category)}
+            />
           ))}
         </div>
       </section>
 
-      <section
-        className="mx-auto w-full max-w-7xl px-5 pb-14 lg:px-10 lg:pb-20"
-        id="build-log"
-      >
-        <div className="rounded-lg border border-[#1f1f1f] bg-[#d7d7d2] p-5 md:p-8">
-          <div className="grid gap-8 lg:grid-cols-[360px_1fr]">
-            <div>
-              <p className="font-mono text-xs text-[#555555]">
-                /currently-building
-              </p>
-              <h2 className="mt-3 text-4xl font-semibold leading-tight sm:text-5xl">
-                블로그를 제품처럼 만들고, 제품을 글처럼 기록합니다.
-              </h2>
-            </div>
-            <div className="divide-y divide-[#a9a9a2] rounded-md border border-[#a9a9a2] bg-[#eeeeeb]">
-              {buildNotes.map((item, index) => (
-                <article
-                  className="grid gap-3 p-4 md:grid-cols-[88px_1fr]"
-                  key={item.label}
-                >
-                  <span className="font-mono text-xs text-[#696963]">
-                    commit {String(index + 1).padStart(2, "0")}
-                  </span>
-                  <div>
-                    <h3 className="font-semibold">{item.label}</h3>
-                    <p className="mt-1 text-sm leading-6 text-[#555555]">
-                      {item.detail}
-                    </p>
-                  </div>
-                </article>
-              ))}
-            </div>
-          </div>
+      <section className="mx-auto w-full max-w-6xl px-5 py-12">
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          {BLOG_CATEGORIES.map((category) => {
+            const meta = categoryMeta[category];
+            return (
+              <article
+                className="rounded-lg border border-[#d4cec2] bg-[#fffdf8] p-5"
+                key={category}
+              >
+                <div className="flex size-10 items-center justify-center rounded-md bg-[#182824] text-[#f7f3ea]">
+                  <meta.icon className="size-5" />
+                </div>
+                <h2 className="mt-5 text-xl font-semibold">{category}</h2>
+                <p className="mt-3 text-sm leading-6 text-[#5b554b]">
+                  {meta.description}
+                </p>
+              </article>
+            );
+          })}
         </div>
       </section>
 
-      <section
-        className="mx-auto w-full max-w-7xl px-5 pb-14 lg:px-10 lg:pb-20"
-        id="notes"
-      >
-        <div className="mb-7 flex items-end justify-between gap-6">
+      <section className="mx-auto w-full max-w-6xl px-5 pb-16">
+        <div className="mb-6 flex items-end justify-between gap-4 border-b border-[#d4cec2] pb-4">
           <div>
-            <p className="font-mono text-xs text-[#696963]">/latest-notes</p>
-            <h2 className="mt-3 text-4xl font-semibold leading-tight sm:text-5xl">
-              최근 기록
-            </h2>
+            <p className="font-mono text-xs text-[#6f6658]">latest</p>
+            <h2 className="mt-2 text-3xl font-semibold">최근 글</h2>
           </div>
+          {postsQuery.isFetching ? (
+            <p className="text-sm text-[#6f6658]">불러오는 중...</p>
+          ) : null}
         </div>
 
-        <div className="divide-y divide-[#b8b8b2] border-y border-[#b8b8b2]">
-          {notes.map((post) => (
-            <article
-              className="group grid gap-5 py-6 md:grid-cols-[120px_1fr_44px] md:items-center"
-              key={post.title}
-            >
-              <div className="font-mono text-xs text-[#696963]">
-                <p>note-{post.id}</p>
-                <p className="mt-2">{post.date}</p>
-              </div>
-              <div>
-                <p className="font-mono text-xs text-[#555555]">
-                  {post.category}
-                </p>
-                <h3 className="mt-2 text-2xl font-semibold leading-tight sm:text-3xl">
-                  {post.title}
-                </h3>
-                <p className="mt-3 max-w-2xl text-[15px] leading-7 text-[#555555]">
-                  {post.excerpt}
-                </p>
-              </div>
-              <div className="hidden justify-end md:flex">
-                <span className="flex size-10 items-center justify-center rounded-md border border-[#b8b8b2] bg-[#eeeeeb] transition-colors group-hover:bg-[#111111] group-hover:text-[#f4f4f2]">
-                  <ArrowUpRight className="size-5" />
-                </span>
-              </div>
-            </article>
-          ))}
-        </div>
+        {postsQuery.isError ? (
+          <EmptyState message="글 목록을 불러오지 못했습니다." />
+        ) : filteredPosts.length > 0 ? (
+          <div className="divide-y divide-[#d4cec2] border-y border-[#d4cec2]">
+            {filteredPosts.map((post) => (
+              <PostListItem key={post.id} post={post} />
+            ))}
+          </div>
+        ) : (
+          <EmptyState message="아직 공개된 글이 없습니다." />
+        )}
       </section>
-
-      <footer
-        className="mx-auto w-full max-w-7xl px-5 pb-10 lg:px-10"
-        id="about"
-      >
-        <div className="rounded-lg border border-[#1f1f1f] bg-[#111111] p-6 text-[#f4f4f2] md:p-8">
-          <p className="font-mono text-xs text-[#b9b9b4]">/about-this-blog</p>
-          <p className="mt-5 max-w-3xl text-2xl font-medium leading-9">
-            유명한 개발 블로그가 되는 것을 목표로, 검색에 걸리는 글보다 다시
-            찾아오게 만드는 글을 쌓아갑니다.
-          </p>
-        </div>
-      </footer>
     </main>
   );
+}
+
+function FeaturedPost({
+  isLoading,
+  post,
+}: {
+  isLoading: boolean;
+  post?: Post;
+}) {
+  if (isLoading) {
+    return (
+      <aside className="rounded-lg border border-[#d4cec2] bg-[#fffdf8] p-6">
+        <p className="text-sm text-[#6f6658]">대표 글을 불러오는 중...</p>
+      </aside>
+    );
+  }
+
+  if (!post) {
+    return (
+      <aside className="rounded-lg border border-[#d4cec2] bg-[#fffdf8] p-6">
+        <p className="font-mono text-xs text-[#6f6658]">featured</p>
+        <h2 className="mt-4 text-2xl font-semibold">첫 글을 기다리는 중</h2>
+        <p className="mt-3 text-sm leading-6 text-[#5b554b]">
+          관리자에서 글을 발행하면 이 영역에 최신 글이 표시됩니다.
+        </p>
+      </aside>
+    );
+  }
+
+  return (
+    <Link
+      className="group overflow-hidden rounded-lg border border-[#182824] bg-[#fffdf8] shadow-[6px_6px_0_#182824]"
+      href={`/posts/${post.slug}`}
+    >
+      {post.coverImage ? (
+        <img
+          alt=""
+          className="aspect-[16/9] w-full object-cover"
+          src={post.coverImage}
+        />
+      ) : (
+        <div className="aspect-[16/9] w-full bg-[#dfe8df]" />
+      )}
+      <div className="p-6">
+        <p className="font-mono text-xs text-[#3f6f5d]">{post.category}</p>
+        <h2 className="mt-3 text-3xl font-semibold leading-tight">
+          {post.title}
+        </h2>
+        <p className="mt-4 line-clamp-3 text-sm leading-6 text-[#5b554b]">
+          {post.summary || post.content}
+        </p>
+        <div className="mt-6 flex items-center justify-between gap-4">
+          <Engagement post={post} />
+          <span className="flex size-10 items-center justify-center rounded-md bg-[#182824] text-[#f7f3ea] transition-transform group-hover:-translate-y-0.5">
+            <ArrowUpRight className="size-5" />
+          </span>
+        </div>
+      </div>
+    </Link>
+  );
+}
+
+function CategoryButton({
+  active,
+  label,
+  onClick,
+}: {
+  active: boolean;
+  label: string;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      className={cn(
+        "h-11 rounded-md border px-3 text-sm font-medium transition-colors",
+        active
+          ? "border-[#182824] bg-[#182824] text-[#f7f3ea]"
+          : "border-[#d4cec2] bg-[#f5f2ec] text-[#4a453b] hover:bg-white",
+      )}
+      onClick={onClick}
+      type="button"
+    >
+      {label}
+    </button>
+  );
+}
+
+function PostListItem({ post }: { post: Post }) {
+  return (
+    <Link
+      className="group grid gap-5 py-6 md:grid-cols-[128px_1fr_120px] md:items-center"
+      href={`/posts/${post.slug}`}
+    >
+      <div className="font-mono text-xs text-[#6f6658]">
+        <p>{formatDate(post.publishedAt ?? post.createdAt)}</p>
+        <p className="mt-2">{post.category}</p>
+      </div>
+      <div>
+        <h3 className="text-2xl font-semibold leading-tight transition-colors group-hover:text-[#2f6f5b]">
+          {post.title}
+        </h3>
+        <p className="mt-3 line-clamp-2 max-w-2xl text-sm leading-6 text-[#5b554b]">
+          {post.summary || post.content}
+        </p>
+        <div className="mt-4">
+          <Engagement post={post} />
+        </div>
+      </div>
+      <div className="hidden justify-end md:flex">
+        <span className="flex size-10 items-center justify-center rounded-md border border-[#d4cec2] bg-[#fffdf8] transition-colors group-hover:bg-[#182824] group-hover:text-[#f7f3ea]">
+          <ArrowUpRight className="size-5" />
+        </span>
+      </div>
+    </Link>
+  );
+}
+
+function Engagement({ post }: { post: Post }) {
+  return (
+    <div className="flex flex-wrap items-center gap-3 text-xs text-[#6f6658]">
+      <span className="inline-flex items-center gap-1">
+        <Eye className="size-3.5" />
+        {post.views}
+      </span>
+      <span className="inline-flex items-center gap-1">
+        <Heart className="size-3.5" />
+        {post.likes}
+      </span>
+      <span className="inline-flex items-center gap-1">
+        <MessageCircle className="size-3.5" />
+        댓글
+      </span>
+    </div>
+  );
+}
+
+function Stat({ label, value }: { label: string; value: number }) {
+  return (
+    <div className="rounded-lg border border-[#d4cec2] bg-[#fffdf8] p-4">
+      <p className="text-sm text-[#6f6658]">{label}</p>
+      <p className="mt-2 text-3xl font-semibold">{value}</p>
+    </div>
+  );
+}
+
+function EmptyState({ message }: { message: string }) {
+  return (
+    <div className="rounded-lg border border-[#d4cec2] bg-[#fffdf8] p-8 text-center text-sm text-[#6f6658]">
+      {message}
+    </div>
+  );
+}
+
+function formatDate(value: string) {
+  return new Intl.DateTimeFormat("ko-KR", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date(value));
 }

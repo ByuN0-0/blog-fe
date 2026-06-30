@@ -1,4 +1,4 @@
-import axios from "axios";
+import axios, { AxiosHeaders } from "axios";
 
 import {
   clearAuthTokens,
@@ -18,6 +18,14 @@ export const api = axios.create({
 
 api.interceptors.request.use((config) => {
   const accessToken = getAccessToken();
+
+  if (typeof FormData !== "undefined" && config.data instanceof FormData) {
+    if (config.headers instanceof AxiosHeaders) {
+      config.headers.delete("Content-Type");
+    } else {
+      delete config.headers?.["Content-Type"];
+    }
+  }
 
   if (accessToken) {
     config.headers.Authorization = `Bearer ${accessToken}`;
@@ -117,6 +125,15 @@ export async function getAdminDependencies() {
 
 export type PostStatus = "draft" | "published" | "private";
 
+export const BLOG_CATEGORIES = [
+  "라이프로그",
+  "북 노트",
+  "기술 노트",
+  "비즈니스",
+] as const;
+
+export type BlogCategory = (typeof BLOG_CATEGORIES)[number];
+
 export type Post = {
   id: string;
   title: string;
@@ -124,7 +141,7 @@ export type Post = {
   summary: string;
   content: string;
   status: PostStatus;
-  category: string;
+  category: BlogCategory | string;
   tags: string[];
   coverImage: string;
   views: number;
@@ -151,10 +168,61 @@ export type PostPayload = {
   summary: string;
   content: string;
   status: PostStatus;
-  category: string;
+  category: BlogCategory;
   tags: string[];
   coverImage: string;
 };
+
+export type CommentPayload = {
+  postSlug: string;
+  author: string;
+  content: string;
+};
+
+export type UploadedImage = {
+  key: string;
+  url: string;
+  contentType: "image/webp";
+  size: number;
+};
+
+export async function getPublishedPosts() {
+  const { data } = await api.get<{ posts: Post[] }>("/api/v1/posts");
+
+  return data.posts;
+}
+
+export async function getPublishedPost(slug: string) {
+  const { data } = await api.get<Post>(`/api/v1/posts/${slug}`);
+
+  return data;
+}
+
+export async function addPostView(slug: string) {
+  const { data } = await api.post<Post>(`/api/v1/posts/${slug}/views`);
+
+  return data;
+}
+
+export async function addPostLike(slug: string) {
+  const { data } = await api.post<Post>(`/api/v1/posts/${slug}/reactions`);
+
+  return data;
+}
+
+export async function getPublicComments(postSlug: string) {
+  const { data } = await api.get<{ comments: Comment[] }>("/api/v1/comments", {
+    params: { postSlug },
+  });
+
+  return data.comments;
+}
+
+export async function createPublicComment(payload: CommentPayload) {
+  const { data } = await api.post<Comment>("/api/v1/comments", payload);
+
+  return data;
+}
 
 export async function getAdminPosts() {
   const { data } = await api.get<{ posts: Post[] }>("/api/v1/admin/posts");
@@ -182,6 +250,18 @@ export async function updateAdminPost(id: string, payload: PostPayload) {
 
 export async function deleteAdminPost(id: string) {
   await api.delete(`/api/v1/admin/posts/${id}`);
+}
+
+export async function uploadAdminImage(file: File) {
+  const formData = new FormData();
+  formData.append("file", file);
+
+  const { data } = await api.post<UploadedImage>(
+    "/api/v1/admin/uploads/images",
+    formData,
+  );
+
+  return data;
 }
 
 export async function getAdminComments() {

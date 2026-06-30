@@ -14,8 +14,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "dev.build.notes",
-  description: "기술 리뷰, 개발 일기, 빌드 로그를 기록하는 개발자 블로그",
+  title: "biyeon.log",
+  description:
+    "라이프로그, 북 노트, 기술 노트, 비즈니스 기록을 남기는 개인 블로그",
 };
 
 export default function RootLayout({
@@ -25,7 +26,7 @@ export default function RootLayout({
 }>) {
   return (
     <html
-      lang="en"
+      lang="ko"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="flex min-h-full flex-col">
