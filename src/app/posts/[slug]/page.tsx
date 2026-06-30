@@ -11,11 +11,12 @@ import {
   Heart,
   MessageCircle,
   Send,
+  Terminal,
 } from "lucide-react";
 import { toast } from "sonner";
 
-import { Button } from "@/components/ui/button";
 import { MarkdownContent } from "@/components/markdown-content";
+import { Button } from "@/components/ui/button";
 import {
   addPostLike,
   addPostView,
@@ -86,10 +87,31 @@ export default function PostDetailPage() {
   }
 
   return (
-    <main className="min-h-screen bg-[#f5f2ec] text-[#191714]">
-      <article>
+    <main className="min-h-screen bg-[#f6f3eb] text-[#24211b] [background-image:linear-gradient(#e5ded1_1px,transparent_1px),linear-gradient(90deg,#e5ded1_1px,transparent_1px)] [background-size:28px_28px]">
+      <header className="sticky top-0 z-20 border-b border-[#d7d0c1] bg-[#f6f3eb]/92 backdrop-blur">
+        <div className="mx-auto flex h-16 w-full max-w-5xl items-center justify-between px-5">
+          <Link
+            className="inline-flex items-center gap-2 font-mono text-sm font-semibold"
+            href="/"
+          >
+            <span className="flex size-8 items-center justify-center rounded-md border border-[#bdb4a4] bg-[#2b2924] text-[#fffdf7]">
+              <Terminal className="size-4" />
+            </span>
+            <span>biyeon.log</span>
+          </Link>
+          <Link
+            className="rounded-md border border-[#cbc3b4] bg-[#fffdf7] px-3 py-2 font-mono text-xs text-[#5f5a50] transition-colors hover:border-[#315f50] hover:text-[#315f50]"
+            href="/admin"
+          >
+            /admin
+          </Link>
+        </div>
+      </header>
+
+      <article className="mx-auto w-full max-w-3xl px-5 py-10">
         <PostHero
           liked={liked}
+          liking={likeMutation.isPending}
           onLike={() => {
             if (liked) {
               return;
@@ -97,19 +119,18 @@ export default function PostDetailPage() {
             likeMutation.mutate();
           }}
           post={post}
-          liking={likeMutation.isPending}
         />
 
-        <section className="mx-auto w-full max-w-3xl px-5 py-12">
+        <section className="mt-8 rounded-md border border-[#d7d0c1] bg-[#fffdf7]/94 p-5 md:p-8">
           <MarkdownContent content={post.content} />
         </section>
       </article>
 
-      <section className="border-t border-[#d4cec2] bg-[#fffdf8]">
+      <section className="border-t border-[#d7d0c1] bg-[#f0eadf]/80">
         <div className="mx-auto w-full max-w-3xl px-5 py-10">
           <div className="mb-6 flex items-center gap-2">
-            <MessageCircle className="size-5 text-[#3f6f5d]" />
-            <h2 className="text-2xl font-semibold">
+            <MessageCircle className="size-5 text-[#315f50]" />
+            <h2 className="text-2xl font-semibold text-[#24211b]">
               댓글 {commentsQuery.data?.length ?? 0}
             </h2>
           </div>
@@ -136,34 +157,32 @@ function PostHero({
   post: Post;
 }) {
   return (
-    <header className="border-b border-[#d4cec2] bg-[#fffdf8]">
-      <div className="mx-auto w-full max-w-5xl px-5 py-8">
-        <Link
-          className="inline-flex items-center gap-2 text-sm text-[#6f6658] transition-colors hover:text-[#191714]"
-          href="/"
-        >
-          <ArrowLeft className="size-4" />
-          목록
-        </Link>
+    <header>
+      <Link
+        className="inline-flex items-center gap-2 rounded-md border border-[#cbc3b4] bg-[#fffdf7] px-3 py-2 font-mono text-xs text-[#5f5a50] transition-colors hover:border-[#315f50] hover:text-[#315f50]"
+        href="/"
+      >
+        <ArrowLeft className="size-4" />
+        목록으로
+      </Link>
 
-        <div className="mt-8 max-w-3xl">
-          <p className="font-mono text-xs text-[#3f6f5d]">{post.category}</p>
-          <h1 className="mt-4 text-4xl font-semibold leading-tight sm:text-6xl">
-            {post.title}
-          </h1>
-          {post.summary ? (
-            <p className="mt-5 text-lg leading-8 text-[#5b554b]">
-              {post.summary}
-            </p>
-          ) : null}
-        </div>
+      <div className="mt-8 border-b border-[#d7d0c1] pb-8">
+        <p className="font-mono text-xs text-[#315f50]">{post.category}</p>
+        <h1 className="mt-4 text-4xl font-semibold leading-tight tracking-normal text-[#24211b] sm:text-5xl">
+          {post.title}
+        </h1>
+        {post.summary ? (
+          <p className="mt-5 text-lg leading-8 text-[#5f5a50]">
+            {post.summary}
+          </p>
+        ) : null}
 
-        <div className="mt-8 flex flex-wrap items-center gap-4 text-sm text-[#6f6658]">
-          <span className="inline-flex items-center gap-2">
+        <div className="mt-6 flex flex-wrap items-center gap-3 font-mono text-xs text-[#6f685d]">
+          <span className="inline-flex h-9 items-center gap-2 rounded-md border border-[#cbc3b4] bg-[#fffdf7] px-3">
             <CalendarDays className="size-4" />
             {formatDate(post.publishedAt ?? post.createdAt)}
           </span>
-          <span className="inline-flex items-center gap-2">
+          <span className="inline-flex h-9 items-center gap-2 rounded-md border border-[#cbc3b4] bg-[#fffdf7] px-3">
             <Eye className="size-4" />
             {post.views}
           </span>
@@ -171,8 +190,8 @@ function PostHero({
             className={cn(
               "inline-flex h-9 items-center gap-2 rounded-md border px-3 transition-colors",
               liked
-                ? "border-[#8f2f42] bg-[#8f2f42] text-white"
-                : "border-[#d4cec2] bg-[#f5f2ec] hover:bg-white",
+                ? "border-[#315f50] bg-[#315f50] text-[#fffdf7]"
+                : "border-[#cbc3b4] bg-[#fffdf7] text-[#5f5a50] hover:border-[#315f50] hover:text-[#315f50]",
             )}
             disabled={liked || liking}
             onClick={onLike}
@@ -185,11 +204,11 @@ function PostHero({
       </div>
 
       {post.coverImage ? (
-        <div className="mx-auto w-full max-w-5xl px-5 pb-10">
+        <div className="mt-8">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             alt=""
-            className="aspect-[16/9] w-full rounded-lg border border-[#d4cec2] object-cover"
+            className="aspect-[16/9] w-full rounded-md border border-[#d7d0c1] object-cover"
             src={post.coverImage}
           />
         </div>
@@ -231,7 +250,7 @@ function CommentForm({ slug }: { slug: string }) {
 
   return (
     <form
-      className="rounded-lg border border-[#d4cec2] bg-[#f5f2ec] p-4"
+      className="rounded-md border border-[#d7d0c1] bg-[#fffdf7] p-4"
       onSubmit={handleSubmit}
     >
       <div className="grid gap-3 sm:grid-cols-[180px_1fr]">
@@ -249,7 +268,11 @@ function CommentForm({ slug }: { slug: string }) {
         />
       </div>
       <div className="mt-3 flex justify-end">
-        <Button disabled={createMutation.isPending} type="submit">
+        <Button
+          className="bg-[#2b2924] text-[#fffdf7] hover:bg-[#3b3831]"
+          disabled={createMutation.isPending}
+          type="submit"
+        >
           <Send className="size-4" />
           {createMutation.isPending ? "작성 중..." : "작성"}
         </Button>
@@ -271,24 +294,35 @@ function CommentList({
   );
 
   if (isLoading) {
-    return <p className="mt-6 text-sm text-[#6f6658]">댓글을 불러오는 중...</p>;
+    return (
+      <p className="mt-6 font-mono text-sm text-[#6f685d]">
+        loading comments...
+      </p>
+    );
   }
 
   if (visibleComments.length === 0) {
-    return <p className="mt-6 text-sm text-[#6f6658]">아직 댓글이 없습니다.</p>;
+    return (
+      <p className="mt-6 font-mono text-sm text-[#6f685d]">
+        아직 댓글이 없습니다.
+      </p>
+    );
   }
 
   return (
-    <div className="mt-6 divide-y divide-[#d4cec2] border-y border-[#d4cec2]">
+    <div className="mt-6 overflow-hidden rounded-md border border-[#d7d0c1] bg-[#fffdf7]">
       {visibleComments.map((comment) => (
-        <article className="py-4" key={comment.id}>
+        <article
+          className="border-b border-[#d7d0c1] p-4 last:border-b-0"
+          key={comment.id}
+        >
           <div className="flex flex-wrap items-center gap-3">
-            <h3 className="font-semibold">{comment.author}</h3>
-            <time className="text-xs text-[#6f6658]">
+            <h3 className="font-semibold text-[#24211b]">{comment.author}</h3>
+            <time className="font-mono text-xs text-[#6f685d]">
               {formatDate(comment.createdAt)}
             </time>
           </div>
-          <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-[#4a453b]">
+          <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-[#5f5a50]">
             {comment.content}
           </p>
         </article>
@@ -299,7 +333,7 @@ function CommentList({
 
 function CenteredMessage({ message }: { message: string }) {
   return (
-    <main className="flex min-h-screen items-center justify-center bg-[#f5f2ec] px-5 text-sm text-[#6f6658]">
+    <main className="flex min-h-screen items-center justify-center bg-[#f6f3eb] px-5 font-mono text-sm text-[#6f685d]">
       {message}
     </main>
   );
@@ -322,4 +356,4 @@ function viewKey(slug: string) {
 }
 
 const inputClassName =
-  "h-10 w-full rounded-md border border-[#d4cec2] bg-white px-3 text-sm outline-none transition-colors focus:border-[#3f6f5d] focus:ring-2 focus:ring-[#3f6f5d]/20";
+  "h-10 w-full rounded-md border border-[#cbc3b4] bg-[#f6f3eb] px-3 text-sm text-[#24211b] outline-none transition-colors placeholder:text-[#8a8377] focus:border-[#315f50] focus:ring-2 focus:ring-[#315f50]/15";

@@ -9,13 +9,13 @@ export function MarkdownContent({ content }: MarkdownContentProps) {
   const blocks = toBlocks(content);
 
   return (
-    <div className="space-y-5 text-[17px] leading-8 text-[#2e2a23]">
+    <div className="space-y-5 text-[17px] leading-8 text-[#352d22]">
       {blocks.map((block, index) => {
         if (block.type === "heading") {
           const Heading = `h${block.level}` as "h2" | "h3";
           return (
             <Heading
-              className="pt-4 text-2xl font-semibold leading-tight text-[#171411]"
+              className="pt-4 text-2xl font-semibold leading-tight text-[#211b13]"
               key={index}
             >
               {block.value}
@@ -28,11 +28,11 @@ export function MarkdownContent({ content }: MarkdownContentProps) {
             <figure key={index}>
               <img
                 alt={block.alt}
-                className="max-h-[560px] w-full rounded-lg border border-[#d4cec2] object-cover"
+                className="max-h-[560px] w-full rounded-md border border-[#d7d0c1] object-cover"
                 src={block.src}
               />
               {block.alt ? (
-                <figcaption className="mt-2 text-center text-xs text-[#6f6658]">
+                <figcaption className="mt-2 text-center font-mono text-xs text-[#6f685d]">
                   {block.alt}
                 </figcaption>
               ) : null}
@@ -43,7 +43,7 @@ export function MarkdownContent({ content }: MarkdownContentProps) {
         if (block.type === "code") {
           return (
             <pre
-              className="overflow-x-auto rounded-lg bg-[#182824] p-4 text-sm leading-6 text-[#f7f3ea]"
+              className="overflow-x-auto rounded-md border border-[#3b3831] bg-[#24211b] p-4 font-mono text-sm leading-6 text-[#f6f3eb]"
               key={index}
             >
               <code>{block.value}</code>
@@ -146,7 +146,7 @@ function renderInline(value: string) {
     }
     parts.push(
       <Link
-        className="font-medium text-[#2f6f5b] underline underline-offset-4"
+        className="font-medium text-[#315f50] underline underline-offset-4"
         href={match[2] ?? "#"}
         key={`${match[2]}-${match.index}`}
         rel="noreferrer"
