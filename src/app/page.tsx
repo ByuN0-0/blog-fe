@@ -92,7 +92,7 @@ export default function Home() {
       </header>
 
       <div className="mx-auto w-full max-w-5xl px-5 py-10">
-        <section className="border-b border-[#d7d0c1] pb-8">
+        <section className="pb-8">
           <p className="font-mono text-xs text-[#6f685d]">
             /home/biyeon/blog
           </p>
