@@ -1,28 +1,37 @@
 /* eslint-disable @next/next/no-img-element */
 "use client";
 
-import { useRef, useState } from "react";
-import { ImagePlus } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { ImagePlus, RefreshCw, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
+import { MarkdownContent } from "@/components/markdown-content";
 import { Button } from "@/components/ui/button";
 import {
   BLOG_CATEGORIES,
+  createAdminTag,
+  getAdminCategories,
+  getAdminTags,
   uploadAdminImage,
-  type BlogCategory,
+  type Category,
   type Post,
   type PostPayload,
   type PostStatus,
+  type Tag,
 } from "@/lib/api";
+import { cn } from "@/lib/utils";
 
 type PostFormValues = {
   title: string;
   slug: string;
   summary: string;
   content: string;
+  metaTitle: string;
+  metaDescription: string;
   status: PostStatus;
-  category: BlogCategory;
-  tags: string;
+  category: string;
+  tags: string[];
   coverImage: string;
 };
 
@@ -45,49 +54,100 @@ export function PostForm({
   submitLabel,
   onSubmit,
 }: PostFormProps) {
+  const queryClient = useQueryClient();
   const contentRef = useRef<HTMLTextAreaElement>(null);
   const [isUploadingCover, setIsUploadingCover] = useState(false);
   const [isUploadingBodyImage, setIsUploadingBodyImage] = useState(false);
+  const [slugTouched, setSlugTouched] = useState(Boolean(initialPost?.slug));
+  const [isDirty, setIsDirty] = useState(false);
+  const [previewMode, setPreviewMode] = useState<"edit" | "preview">("edit");
+  const categoriesQuery = useQuery({
+    queryKey: ["admin", "categories"],
+    queryFn: getAdminCategories,
+  });
+  const tagsQuery = useQuery({
+    queryKey: ["admin", "tags"],
+    queryFn: getAdminTags,
+  });
+  const createTagMutation = useMutation({
+    mutationFn: (name: string) =>
+      createAdminTag({
+        name,
+        slug: slugify(name),
+        description: "",
+        active: true,
+      }),
+    onSuccess: (tag) => {
+      toast.success("태그를 추가했습니다.");
+      queryClient.invalidateQueries({ queryKey: ["admin", "tags"] });
+      updateValue("tags", [...values.tags, tag.name]);
+    },
+    onError: () => toast.error("태그 추가에 실패했습니다."),
+  });
+
   const [values, setValues] = useState<PostFormValues>({
     title: initialPost?.title ?? "",
     slug: initialPost?.slug ?? "",
     summary: initialPost?.summary ?? "",
     content: initialPost?.content ?? "",
+    metaTitle: initialPost?.metaTitle ?? "",
+    metaDescription: initialPost?.metaDescription ?? "",
     status: initialPost?.status ?? "draft",
-    category: toBlogCategory(initialPost?.category),
-    tags: initialPost?.tags.join(", ") ?? "",
+    category: initialPost?.category ?? BLOG_CATEGORIES[2],
+    tags: initialPost?.tags ?? [],
     coverImage: initialPost?.coverImage ?? "",
   });
+
+  const categories = categoryOptions(categoriesQuery.data ?? [], values.category);
+  const tags = tagOptions(tagsQuery.data ?? [], values.tags);
+
+  useEffect(() => {
+    function handleBeforeUnload(event: BeforeUnloadEvent) {
+      if (!isDirty) return;
+      event.preventDefault();
+      event.returnValue = "";
+    }
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, [isDirty]);
 
   function updateValue<K extends keyof PostFormValues>(
     key: K,
     value: PostFormValues[K],
   ) {
     setValues((current) => ({ ...current, [key]: value }));
+    setIsDirty(true);
+  }
+
+  function handleTitleChange(title: string) {
+    setValues((current) => ({
+      ...current,
+      title,
+      slug: slugTouched ? current.slug : slugify(title),
+    }));
+    setIsDirty(true);
   }
 
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    setIsDirty(false);
 
     onSubmit({
       title: values.title.trim(),
       slug: values.slug.trim(),
       summary: values.summary.trim(),
       content: values.content.trim(),
+      metaTitle: values.metaTitle.trim(),
+      metaDescription: values.metaDescription.trim(),
       status: values.status,
       category: values.category,
-      tags: values.tags
-        .split(",")
-        .map((tag) => tag.trim())
-        .filter(Boolean),
+      tags: values.tags,
       coverImage: values.coverImage.trim(),
     });
   }
 
   async function handleCoverImageUpload(file: File | undefined) {
-    if (!file) {
-      return;
-    }
+    if (!file) return;
     setIsUploadingCover(true);
     try {
       const image = await uploadAdminImage(file);
@@ -101,9 +161,7 @@ export function PostForm({
   }
 
   async function handleBodyImageUpload(file: File | undefined) {
-    if (!file) {
-      return;
-    }
+    if (!file) return;
     setIsUploadingBodyImage(true);
     try {
       const image = await uploadAdminImage(file);
@@ -134,24 +192,54 @@ export function PostForm({
     });
   }
 
+  function toggleTag(tagName: string) {
+    const nextTags = values.tags.includes(tagName)
+      ? values.tags.filter((tag) => tag !== tagName)
+      : [...values.tags, tagName];
+    updateValue("tags", nextTags);
+  }
+
+  function handleCreateTag() {
+    const name = window.prompt("새 태그 이름");
+    if (!name?.trim()) return;
+    if (values.tags.includes(name.trim())) return;
+    createTagMutation.mutate(name.trim());
+  }
+
   return (
     <form className="space-y-5" onSubmit={handleSubmit}>
       <div className="grid gap-4 md:grid-cols-2">
         <Field label="제목">
           <input
             className={inputClassName}
-            onChange={(event) => updateValue("title", event.target.value)}
+            onChange={(event) => handleTitleChange(event.target.value)}
             required
             value={values.title}
           />
         </Field>
         <Field label="Slug">
-          <input
-            className={inputClassName}
-            onChange={(event) => updateValue("slug", event.target.value)}
-            placeholder="empty이면 제목 기반 자동 생성"
-            value={values.slug}
-          />
+          <div className="flex gap-2">
+            <input
+              className={inputClassName}
+              onChange={(event) => {
+                setSlugTouched(true);
+                updateValue("slug", event.target.value);
+              }}
+              placeholder="empty이면 제목 기반 자동 생성"
+              value={values.slug}
+            />
+            <Button
+              onClick={() => {
+                setSlugTouched(true);
+                updateValue("slug", slugify(values.title));
+              }}
+              type="button"
+              variant="outline"
+            >
+              <RefreshCw className="size-4" />
+              재생성
+            </Button>
+          </div>
         </Field>
       </div>
 
@@ -174,14 +262,12 @@ export function PostForm({
         <Field label="카테고리">
           <select
             className={inputClassName}
-            onChange={(event) =>
-              updateValue("category", event.target.value as BlogCategory)
-            }
+            onChange={(event) => updateValue("category", event.target.value)}
             value={values.category}
           >
-            {BLOG_CATEGORIES.map((category) => (
-              <option key={category} value={category}>
-                {category}
+            {categories.map((category) => (
+              <option key={category.name} value={category.name}>
+                {category.name}
               </option>
             ))}
           </select>
@@ -196,18 +282,74 @@ export function PostForm({
         />
       </Field>
 
-      <Field label="본문">
-        <textarea
-          className={`${inputClassName} min-h-80 resize-y py-3 font-mono text-sm leading-6`}
-          onChange={(event) => updateValue("content", event.target.value)}
-          ref={contentRef}
-          required
-          value={values.content}
-        />
-      </Field>
+      <div className="grid gap-4 md:grid-cols-2">
+        <Field label="Meta title">
+          <input
+            className={inputClassName}
+            onChange={(event) => updateValue("metaTitle", event.target.value)}
+            placeholder="비우면 제목 사용"
+            value={values.metaTitle}
+          />
+        </Field>
+        <Field label="Meta description">
+          <input
+            className={inputClassName}
+            onChange={(event) =>
+              updateValue("metaDescription", event.target.value)
+            }
+            placeholder="비우면 요약 사용"
+            value={values.metaDescription}
+          />
+        </Field>
+      </div>
 
       <div className="rounded-lg border bg-card p-4">
-        <div className="flex flex-wrap gap-3">
+        <div className="mb-3 flex items-center justify-between gap-3">
+          <span className="text-sm font-medium">본문</span>
+          <div className="flex gap-2 md:hidden">
+            <button
+              className={tabClass(previewMode === "edit")}
+              onClick={() => setPreviewMode("edit")}
+              type="button"
+            >
+              편집
+            </button>
+            <button
+              className={tabClass(previewMode === "preview")}
+              onClick={() => setPreviewMode("preview")}
+              type="button"
+            >
+              미리보기
+            </button>
+          </div>
+        </div>
+        <div className="grid gap-4 md:grid-cols-2">
+          <textarea
+            className={cn(
+              `${inputClassName} min-h-[520px] resize-y py-3 font-mono text-sm leading-6`,
+              previewMode === "preview" && "hidden md:block",
+            )}
+            onChange={(event) => updateValue("content", event.target.value)}
+            ref={contentRef}
+            required
+            value={values.content}
+          />
+          <div
+            className={cn(
+              "min-h-[520px] overflow-auto rounded-md border bg-background p-4",
+              previewMode === "edit" && "hidden md:block",
+            )}
+          >
+            {values.content.trim() ? (
+              <MarkdownContent content={values.content} />
+            ) : (
+              <p className="font-mono text-sm text-muted-foreground">
+                preview
+              </p>
+            )}
+          </div>
+        </div>
+        <div className="mt-3 flex flex-wrap gap-3">
           <UploadButton
             disabled={isUploadingBodyImage}
             label={isUploadingBodyImage ? "삽입 중..." : "본문 이미지 삽입"}
@@ -216,39 +358,73 @@ export function PostForm({
         </div>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2">
-        <Field label="태그">
-          <input
-            className={inputClassName}
-            onChange={(event) => updateValue("tags", event.target.value)}
-            placeholder="nextjs, go, blog"
-            value={values.tags}
-          />
-        </Field>
-        <Field label="대표 이미지 URL">
-          <input
-            className={inputClassName}
-            onChange={(event) => updateValue("coverImage", event.target.value)}
-            value={values.coverImage}
-          />
-        </Field>
-      </div>
+      <Field label="태그">
+        <div className="flex flex-wrap gap-2 rounded-md border bg-background p-3">
+          {tags.map((tag) => (
+            <button
+              className={cn(
+                "rounded-md border px-3 py-2 text-sm transition-colors",
+                values.tags.includes(tag.name)
+                  ? "border-primary bg-primary text-primary-foreground"
+                  : "border-border bg-card hover:border-ring",
+              )}
+              key={tag.name}
+              onClick={() => toggleTag(tag.name)}
+              type="button"
+            >
+              #{tag.name}
+            </button>
+          ))}
+          <Button
+            disabled={createTagMutation.isPending}
+            onClick={handleCreateTag}
+            type="button"
+            variant="outline"
+          >
+            새 태그
+          </Button>
+        </div>
+      </Field>
 
       <div className="rounded-lg border bg-card p-4">
-        <div className="flex flex-wrap items-center gap-3">
-          <UploadButton
-            disabled={isUploadingCover}
-            label={isUploadingCover ? "업로드 중..." : "대표 이미지 업로드"}
-            onFile={handleCoverImageUpload}
-          />
+        <div className="mb-3 flex items-center justify-between gap-3">
+          <span className="text-sm font-medium">대표 이미지</span>
           {values.coverImage ? (
-            <img
-              alt=""
-              className="h-20 w-32 rounded-md border object-cover"
-              src={values.coverImage}
-            />
+            <Button
+              onClick={() => updateValue("coverImage", "")}
+              type="button"
+              variant="outline"
+            >
+              <Trash2 className="size-4" />
+              제거
+            </Button>
           ) : null}
         </div>
+        <div className="grid gap-4 md:grid-cols-[1fr_180px]">
+          <Field label="대표 이미지 URL">
+            <input
+              className={inputClassName}
+              onChange={(event) =>
+                updateValue("coverImage", event.target.value)
+              }
+              value={values.coverImage}
+            />
+          </Field>
+          <div className="flex items-end">
+            <UploadButton
+              disabled={isUploadingCover}
+              label={isUploadingCover ? "업로드 중..." : "대표 이미지 업로드"}
+              onFile={handleCoverImageUpload}
+            />
+          </div>
+        </div>
+        {values.coverImage ? (
+          <img
+            alt=""
+            className="mt-4 aspect-[16/9] w-full max-w-md rounded-md border object-cover"
+            src={values.coverImage}
+          />
+        ) : null}
       </div>
 
       <Button disabled={isSubmitting} type="submit">
@@ -309,8 +485,73 @@ function UploadButton({
   );
 }
 
-function toBlogCategory(category: string | undefined): BlogCategory {
-  return BLOG_CATEGORIES.find((candidate) => candidate === category) ?? "기술 노트";
+function categoryOptions(categories: Category[], currentCategory: string) {
+  const activeCategories = categories.filter((category) => category.active);
+  const options =
+    activeCategories.length > 0
+      ? activeCategories
+      : BLOG_CATEGORIES.map((name, index) => ({
+          id: name,
+          name,
+          slug: slugify(name),
+          description: "",
+          sortOrder: index + 1,
+          active: true,
+          createdAt: "",
+          updatedAt: "",
+        }));
+  if (
+    currentCategory &&
+    !options.some((category) => category.name === currentCategory)
+  ) {
+    return [
+      ...options,
+      {
+        id: currentCategory,
+        name: currentCategory,
+        slug: slugify(currentCategory),
+        description: "",
+        sortOrder: options.length + 1,
+        active: true,
+        createdAt: "",
+        updatedAt: "",
+      },
+    ];
+  }
+  return options;
+}
+
+function tagOptions(tags: Tag[], selectedTags: string[]) {
+  const options = tags.filter((tag) => tag.active);
+  const missing = selectedTags
+    .filter((tag) => !options.some((option) => option.name === tag))
+    .map((name) => ({
+      id: name,
+      name,
+      slug: slugify(name),
+      description: "",
+      active: true,
+      postCount: 0,
+      createdAt: "",
+      updatedAt: "",
+    }));
+  return [...options, ...missing];
+}
+
+function slugify(value: string) {
+  const slug = value
+    .trim()
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}]+/gu, "-")
+    .replace(/^-+|-+$/g, "");
+  return slug || `post-${Date.now()}`;
+}
+
+function tabClass(active: boolean) {
+  return cn(
+    "rounded-md border px-3 py-1.5 text-xs",
+    active ? "bg-primary text-primary-foreground" : "bg-card",
+  );
 }
 
 const inputClassName =

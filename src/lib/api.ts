@@ -7,6 +7,19 @@ import {
   setAuthTokens,
   type AuthTokens,
 } from "@/lib/auth-tokens";
+import {
+  BLOG_CATEGORIES,
+  type BlogCategory,
+  type Category,
+  type Comment,
+  type Post,
+  type PostStatus,
+  type Tag,
+  type TodayStats,
+} from "@/lib/blog-types";
+
+export { BLOG_CATEGORIES };
+export type { BlogCategory, Category, Comment, Post, PostStatus, Tag, TodayStats };
 
 export const api = axios.create({
   baseURL: process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8080",
@@ -123,52 +136,15 @@ export async function getAdminDependencies() {
   return data;
 }
 
-export type PostStatus = "draft" | "published" | "private";
-
-export const BLOG_CATEGORIES = [
-  "라이프로그",
-  "북 노트",
-  "기술 노트",
-  "비즈니스",
-] as const;
-
-export type BlogCategory = (typeof BLOG_CATEGORIES)[number];
-
-export type Post = {
-  id: string;
-  title: string;
-  slug: string;
-  summary: string;
-  content: string;
-  status: PostStatus;
-  category: BlogCategory | string;
-  tags: string[];
-  coverImage: string;
-  views: number;
-  likes: number;
-  publishedAt: string | null;
-  createdAt: string;
-  updatedAt: string;
-};
-
-export type Comment = {
-  id: string;
-  postId: string;
-  postSlug: string;
-  author: string;
-  content: string;
-  status: "visible" | "hidden";
-  createdAt: string;
-  updatedAt: string;
-};
-
 export type PostPayload = {
   title: string;
   slug: string;
   summary: string;
   content: string;
+  metaTitle: string;
+  metaDescription: string;
   status: PostStatus;
-  category: BlogCategory;
+  category: string;
   tags: string[];
   coverImage: string;
 };
@@ -177,6 +153,27 @@ export type CommentPayload = {
   postSlug: string;
   author: string;
   content: string;
+  password: string;
+};
+
+export type CommentUpdatePayload = {
+  content: string;
+  password: string;
+};
+
+export type CategoryPayload = {
+  name: string;
+  slug: string;
+  description: string;
+  sortOrder: number;
+  active: boolean;
+};
+
+export type TagPayload = {
+  name: string;
+  slug: string;
+  description: string;
+  active: boolean;
 };
 
 export type UploadedImage = {
@@ -190,6 +187,38 @@ export async function getPublishedPosts() {
   const { data } = await api.get<{ posts: Post[] }>("/api/v1/posts");
 
   return data.posts;
+}
+
+export async function searchPosts(params: {
+  q?: string;
+  category?: string;
+  tag?: string;
+}) {
+  const { data } = await api.get<{ posts: Post[] }>("/api/v1/search", {
+    params,
+  });
+
+  return data.posts;
+}
+
+export async function getCategories() {
+  const { data } = await api.get<{ categories: Category[] }>(
+    "/api/v1/categories",
+  );
+
+  return data.categories;
+}
+
+export async function getTags() {
+  const { data } = await api.get<{ tags: Tag[] }>("/api/v1/tags");
+
+  return data.tags;
+}
+
+export async function getTag(slug: string) {
+  const { data } = await api.get<Tag>(`/api/v1/tags/${slug}`);
+
+  return data;
 }
 
 export async function getPublishedPost(slug: string) {
@@ -224,6 +253,19 @@ export async function createPublicComment(payload: CommentPayload) {
   return data;
 }
 
+export async function updatePublicComment(
+  id: string,
+  payload: CommentUpdatePayload,
+) {
+  const { data } = await api.patch<Comment>(`/api/v1/comments/${id}`, payload);
+
+  return data;
+}
+
+export async function deletePublicComment(id: string, password: string) {
+  await api.delete(`/api/v1/comments/${id}`, { data: { password } });
+}
+
 export async function getAdminPosts() {
   const { data } = await api.get<{ posts: Post[] }>("/api/v1/admin/posts");
 
@@ -250,6 +292,64 @@ export async function updateAdminPost(id: string, payload: PostPayload) {
 
 export async function deleteAdminPost(id: string) {
   await api.delete(`/api/v1/admin/posts/${id}`);
+}
+
+export async function getAdminCategories() {
+  const { data } = await api.get<{ categories: Category[] }>(
+    "/api/v1/admin/categories",
+  );
+
+  return data.categories;
+}
+
+export async function createAdminCategory(payload: CategoryPayload) {
+  const { data } = await api.post<Category>("/api/v1/admin/categories", payload);
+
+  return data;
+}
+
+export async function updateAdminCategory(
+  id: string,
+  payload: CategoryPayload,
+) {
+  const { data } = await api.put<Category>(
+    `/api/v1/admin/categories/${id}`,
+    payload,
+  );
+
+  return data;
+}
+
+export async function deleteAdminCategory(id: string) {
+  await api.delete(`/api/v1/admin/categories/${id}`);
+}
+
+export async function getAdminTags() {
+  const { data } = await api.get<{ tags: Tag[] }>("/api/v1/admin/tags");
+
+  return data.tags;
+}
+
+export async function createAdminTag(payload: TagPayload) {
+  const { data } = await api.post<Tag>("/api/v1/admin/tags", payload);
+
+  return data;
+}
+
+export async function updateAdminTag(id: string, payload: TagPayload) {
+  const { data } = await api.put<Tag>(`/api/v1/admin/tags/${id}`, payload);
+
+  return data;
+}
+
+export async function deleteAdminTag(id: string) {
+  await api.delete(`/api/v1/admin/tags/${id}`);
+}
+
+export async function getAdminTodayStats() {
+  const { data } = await api.get<TodayStats>("/api/v1/admin/stats/today");
+
+  return data;
 }
 
 export async function uploadAdminImage(file: File) {

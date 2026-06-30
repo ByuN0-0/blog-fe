@@ -4,6 +4,7 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useRouter } from "next/navigation";
 import {
   ArrowUpRight,
   BookOpen,
@@ -13,14 +14,18 @@ import {
   Heart,
   Map,
   MessageCircle,
+  Search,
   Terminal,
 } from "lucide-react";
 
 import {
-  BLOG_CATEGORIES,
+  getCategories,
   getPublishedPosts,
+  getTags,
   type BlogCategory,
+  type Category,
   type Post,
+  type Tag,
 } from "@/lib/api";
 import { cn } from "@/lib/utils";
 
@@ -51,14 +56,25 @@ const categoryMeta: Record<
 };
 
 export default function Home() {
-  const [selectedCategory, setSelectedCategory] =
-    useState<BlogCategory | "all">("all");
+  const router = useRouter();
+  const [query, setQuery] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const postsQuery = useQuery({
     queryKey: ["posts", "published"],
     queryFn: getPublishedPosts,
   });
+  const categoriesQuery = useQuery({
+    queryKey: ["categories", "public"],
+    queryFn: getCategories,
+  });
+  const tagsQuery = useQuery({
+    queryKey: ["tags", "public"],
+    queryFn: getTags,
+  });
 
   const posts = useMemo(() => postsQuery.data ?? [], [postsQuery.data]);
+  const categories = categoriesQuery.data ?? [];
+  const tags = tagsQuery.data ?? [];
   const filteredPosts = useMemo(() => {
     if (selectedCategory === "all") {
       return posts;
@@ -68,6 +84,16 @@ export default function Home() {
 
   const totalViews = posts.reduce((sum, post) => sum + post.views, 0);
   const totalLikes = posts.reduce((sum, post) => sum + post.likes, 0);
+
+  function handleSearch(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const nextQuery = query.trim();
+    if (!nextQuery) {
+      router.push("/search");
+      return;
+    }
+    router.push(`/search?q=${encodeURIComponent(nextQuery)}`);
+  }
 
   return (
     <main className="min-h-screen bg-[#f6f3eb] text-[#24211b] [background-image:linear-gradient(#e5ded1_1px,transparent_1px),linear-gradient(90deg,#e5ded1_1px,transparent_1px)] [background-size:28px_28px]">
@@ -103,6 +129,26 @@ export default function Home() {
             라이프로그, 북 노트, 기술 노트, 비즈니스 글을 차분하게 쌓는
             개인 블로그입니다.
           </p>
+          <form
+            className="mt-6 flex max-w-xl gap-2"
+            onSubmit={handleSearch}
+          >
+            <div className="relative min-w-0 flex-1">
+              <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[#6f685d]" />
+              <input
+                className="h-11 w-full rounded-md border border-[#cbc3b4] bg-[#fffdf7] pl-10 pr-3 text-sm outline-none transition-colors placeholder:text-[#8a8377] focus:border-[#315f50] focus:ring-2 focus:ring-[#315f50]/15"
+                onChange={(event) => setQuery(event.target.value)}
+                placeholder="글 검색"
+                value={query}
+              />
+            </div>
+            <button
+              className="h-11 rounded-md border border-[#2b2924] bg-[#2b2924] px-4 font-mono text-xs text-[#fffdf7] transition-colors hover:bg-[#3b3831]"
+              type="submit"
+            >
+              search
+            </button>
+          </form>
         </section>
 
         <div className="mt-10 grid gap-10 lg:grid-cols-[minmax(0,1fr)_270px]">
@@ -112,7 +158,7 @@ export default function Home() {
                 <p className="font-mono text-xs text-[#6f685d]">
                   {selectedCategory === "all"
                     ? "all posts"
-                    : categoryMeta[selectedCategory].command}
+                    : categoryCommand(selectedCategory)}
                 </p>
                 <h2 className="mt-2 text-2xl font-semibold text-[#24211b]">
                   {selectedCategory === "all" ? "최근 글" : selectedCategory}
@@ -137,9 +183,11 @@ export default function Home() {
           </section>
 
           <Sidebar
+            categories={categories}
             onSelectCategory={setSelectedCategory}
             posts={posts}
             selectedCategory={selectedCategory}
+            tags={tags}
             totalLikes={totalLikes}
             totalViews={totalViews}
           />
@@ -150,15 +198,19 @@ export default function Home() {
 }
 
 function Sidebar({
+  categories,
   onSelectCategory,
   posts,
   selectedCategory,
+  tags,
   totalLikes,
   totalViews,
 }: {
-  onSelectCategory: (category: BlogCategory | "all") => void;
+  categories: Category[];
+  onSelectCategory: (category: string) => void;
   posts: Post[];
-  selectedCategory: BlogCategory | "all";
+  selectedCategory: string;
+  tags: Tag[];
   totalLikes: number;
   totalViews: number;
 }) {
@@ -173,18 +225,18 @@ function Sidebar({
             label="전체"
             onClick={() => onSelectCategory("all")}
           />
-          {BLOG_CATEGORIES.map((category) => {
-            const meta = categoryMeta[category];
-            const count = posts.filter((post) => post.category === category)
+          {categories.map((category) => {
+            const meta = categoryMeta[category.name as BlogCategory];
+            const count = posts.filter((post) => post.category === category.name)
               .length;
             return (
               <CategoryButton
-                active={selectedCategory === category}
+                active={selectedCategory === category.name}
                 count={count}
-                icon={meta.icon}
-                key={category}
-                label={category}
-                onClick={() => onSelectCategory(category)}
+                icon={meta?.icon}
+                key={category.id}
+                label={category.name}
+                onClick={() => onSelectCategory(category.name)}
               />
             );
           })}
@@ -199,6 +251,23 @@ function Sidebar({
           <Stat label="likes" value={totalLikes} />
         </dl>
       </section>
+
+      {tags.length > 0 ? (
+        <section className="rounded-md border border-[#d7d0c1] bg-[#fffdf7]/92 p-4">
+          <h2 className="font-mono text-xs text-[#6f685d]">tags</h2>
+          <div className="mt-4 flex flex-wrap gap-2">
+            {tags.map((tag) => (
+              <Link
+                className="rounded-md border border-[#cbc3b4] bg-[#f6f3eb] px-2.5 py-1.5 font-mono text-xs text-[#5f5a50] transition-colors hover:border-[#315f50] hover:text-[#315f50]"
+                href={`/tags/${tag.slug}`}
+                key={tag.id}
+              >
+                #{tag.name}
+              </Link>
+            ))}
+          </div>
+        </section>
+      ) : null}
     </aside>
   );
 }
@@ -239,12 +308,11 @@ function CategoryButton({
 function PostPreview({ index, post }: { index: number; post: Post }) {
   return (
     <article className="border-b border-[#d7d0c1] last:border-b-0">
-      <Link
+      <div
         className={cn(
           "group grid gap-5 px-5 py-6 transition-colors hover:bg-[#f0eadf]",
           post.coverImage && "md:grid-cols-[minmax(0,1fr)_168px]",
         )}
-        href={`/posts/${post.slug}`}
       >
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2 font-mono text-xs text-[#6f685d]">
@@ -252,28 +320,48 @@ function PostPreview({ index, post }: { index: number; post: Post }) {
             <span>{formatDate(post.publishedAt ?? post.createdAt)}</span>
             <span className="text-[#315f50]">{post.category}</span>
           </div>
-          <h3 className="mt-3 text-2xl font-semibold leading-tight text-[#24211b] transition-colors group-hover:text-[#315f50]">
-            {post.title}
-          </h3>
+          <Link href={`/posts/${post.slug}`}>
+            <h3 className="mt-3 text-2xl font-semibold leading-tight text-[#24211b] transition-colors hover:text-[#315f50]">
+              {post.title}
+            </h3>
+          </Link>
           <p className="mt-3 line-clamp-2 text-sm leading-6 text-[#5f5a50]">
             {post.summary || post.content}
           </p>
+          {post.tags.length > 0 ? (
+            <div className="mt-3 flex flex-wrap gap-2">
+              {post.tags.map((tag) => (
+                <Link
+                  className="font-mono text-xs text-[#315f50] underline-offset-4 hover:underline"
+                  href={`/search?tag=${encodeURIComponent(tag)}`}
+                  key={tag}
+                >
+                  #{tag}
+                </Link>
+              ))}
+            </div>
+          ) : null}
           <div className="mt-4 flex items-center justify-between gap-4">
             <Engagement post={post} />
-            <span className="inline-flex items-center gap-1 font-mono text-xs text-[#6f685d] transition-colors group-hover:text-[#315f50]">
+            <Link
+              className="inline-flex items-center gap-1 font-mono text-xs text-[#6f685d] transition-colors hover:text-[#315f50]"
+              href={`/posts/${post.slug}`}
+            >
               read
               <ArrowUpRight className="size-3.5" />
-            </span>
+            </Link>
           </div>
         </div>
         {post.coverImage ? (
-          <img
-            alt=""
-            className="aspect-[4/3] w-full rounded-md border border-[#d7d0c1] object-cover md:aspect-square"
-            src={post.coverImage}
-          />
+          <Link href={`/posts/${post.slug}`}>
+            <img
+              alt=""
+              className="aspect-[4/3] w-full rounded-md border border-[#d7d0c1] object-cover md:aspect-square"
+              src={post.coverImage}
+            />
+          </Link>
         ) : null}
-      </Link>
+      </div>
     </article>
   );
 }
@@ -322,4 +410,8 @@ function formatDate(value: string) {
     month: "2-digit",
     day: "2-digit",
   }).format(new Date(value));
+}
+
+function categoryCommand(category: string) {
+  return categoryMeta[category as BlogCategory]?.command ?? "category";
 }

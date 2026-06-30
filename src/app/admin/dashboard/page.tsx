@@ -11,6 +11,7 @@ import {
   Database,
   Edit,
   EyeOff,
+  FolderTree,
   LogOut,
   Plus,
   RefreshCw,
@@ -27,6 +28,7 @@ import {
   getAdminComments,
   getAdminMe,
   getAdminPosts,
+  getAdminTodayStats,
   hideAdminComment,
   logout,
   type Comment,
@@ -57,6 +59,11 @@ export default function AdminDashboardPage() {
   const dependenciesQuery = useQuery({
     queryKey: ["admin", "dependencies"],
     queryFn: getAdminDependencies,
+    enabled: meQuery.isSuccess,
+  });
+  const todayStatsQuery = useQuery({
+    queryKey: ["admin", "stats", "today"],
+    queryFn: getAdminTodayStats,
     enabled: meQuery.isSuccess,
   });
 
@@ -152,6 +159,20 @@ export default function AdminDashboardPage() {
               <Plus className="size-4" />
               새 글
             </Link>
+            <Link
+              className={cn(buttonVariants({ size: "lg", variant: "outline" }))}
+              href="/admin/categories"
+            >
+              <FolderTree className="size-4" />
+              카테고리
+            </Link>
+            <Link
+              className={cn(buttonVariants({ size: "lg", variant: "outline" }))}
+              href="/admin/tags"
+            >
+              <FolderTree className="size-4" />
+              태그
+            </Link>
             <Button onClick={handleLogout} size="lg" variant="outline">
               <LogOut className="size-4" />
               로그아웃
@@ -159,7 +180,7 @@ export default function AdminDashboardPage() {
           </div>
         </div>
 
-        <div className="grid gap-4 py-8 md:grid-cols-3">
+        <div className="grid gap-4 py-8 md:grid-cols-4">
           <StatCard
             label="전체 글"
             value={postsQuery.data?.length ?? 0}
@@ -174,6 +195,10 @@ export default function AdminDashboardPage() {
           <StatCard
             label="댓글"
             value={commentsQuery.data?.length ?? 0}
+          />
+          <StatCard
+            label={`오늘 방문수 ${todayStatsQuery.data?.date ?? ""}`}
+            value={todayStatsQuery.data?.views ?? 0}
           />
         </div>
 
