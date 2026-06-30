@@ -14,8 +14,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Personal Dev Blog",
-  description: "기술 리뷰, 개발 일기, 사업 빌드 로그를 기록하는 개인 개발 블로그",
+  title: "dev.build.notes",
+  description: "기술 리뷰, 개발 일기, 빌드 로그를 기록하는 개발자 블로그",
 };
 
 export default function RootLayout({
