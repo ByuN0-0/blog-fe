@@ -3,7 +3,20 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ImagePlus, RefreshCw, Trash2 } from "lucide-react";
+import {
+  Bold,
+  Code2,
+  Heading2,
+  Heading3,
+  ImagePlus,
+  Link2,
+  List,
+  Minus,
+  Quote,
+  RefreshCw,
+  SquareCode,
+  Trash2,
+} from "lucide-react";
 import { toast } from "sonner";
 
 import { MarkdownContent } from "@/components/markdown-content";
@@ -27,8 +40,6 @@ type PostFormValues = {
   slug: string;
   summary: string;
   content: string;
-  metaTitle: string;
-  metaDescription: string;
   status: PostStatus;
   category: string;
   tags: string[];
@@ -41,6 +52,17 @@ type PostFormProps = {
   submitLabel: string;
   onSubmit: (payload: PostPayload) => void;
 };
+
+type MarkdownFormat =
+  | "h2"
+  | "h3"
+  | "bold"
+  | "link"
+  | "inlineCode"
+  | "codeBlock"
+  | "quote"
+  | "list"
+  | "divider";
 
 const statusOptions: Array<{ label: string; value: PostStatus }> = [
   { label: "임시저장", value: "draft" },
@@ -60,7 +82,8 @@ export function PostForm({
   const [isUploadingBodyImage, setIsUploadingBodyImage] = useState(false);
   const [slugTouched, setSlugTouched] = useState(Boolean(initialPost?.slug));
   const [isDirty, setIsDirty] = useState(false);
-  const [previewMode, setPreviewMode] = useState<"edit" | "preview">("edit");
+  const [showAdvanced, setShowAdvanced] = useState(false);
+  const [markdownTab, setMarkdownTab] = useState<"write" | "preview">("write");
   const categoriesQuery = useQuery({
     queryKey: ["admin", "categories"],
     queryFn: getAdminCategories,
@@ -69,6 +92,18 @@ export function PostForm({
     queryKey: ["admin", "tags"],
     queryFn: getAdminTags,
   });
+
+  const [values, setValues] = useState<PostFormValues>({
+    title: initialPost?.title ?? "",
+    slug: initialPost?.slug ?? "",
+    summary: initialPost?.summary ?? "",
+    content: initialPost?.content ?? "",
+    status: initialPost?.status ?? "draft",
+    category: initialPost?.category ?? BLOG_CATEGORIES[2],
+    tags: initialPost?.tags ?? [],
+    coverImage: initialPost?.coverImage ?? "",
+  });
+
   const createTagMutation = useMutation({
     mutationFn: (name: string) =>
       createAdminTag({
@@ -83,19 +118,6 @@ export function PostForm({
       updateValue("tags", [...values.tags, tag.name]);
     },
     onError: () => toast.error("태그 추가에 실패했습니다."),
-  });
-
-  const [values, setValues] = useState<PostFormValues>({
-    title: initialPost?.title ?? "",
-    slug: initialPost?.slug ?? "",
-    summary: initialPost?.summary ?? "",
-    content: initialPost?.content ?? "",
-    metaTitle: initialPost?.metaTitle ?? "",
-    metaDescription: initialPost?.metaDescription ?? "",
-    status: initialPost?.status ?? "draft",
-    category: initialPost?.category ?? BLOG_CATEGORIES[2],
-    tags: initialPost?.tags ?? [],
-    coverImage: initialPost?.coverImage ?? "",
   });
 
   const categories = categoryOptions(categoriesQuery.data ?? [], values.category);
@@ -137,8 +159,8 @@ export function PostForm({
       slug: values.slug.trim(),
       summary: values.summary.trim(),
       content: values.content.trim(),
-      metaTitle: values.metaTitle.trim(),
-      metaDescription: values.metaDescription.trim(),
+      metaTitle: "",
+      metaDescription: "",
       status: values.status,
       category: values.category,
       tags: values.tags,
@@ -165,7 +187,7 @@ export function PostForm({
     setIsUploadingBodyImage(true);
     try {
       const image = await uploadAdminImage(file);
-      insertMarkdownImage(image.url, file.name);
+      insertAtCursor(`\n![${file.name.replace(/\.[^.]+$/, "")}](${image.url})\n`);
       toast.success("본문 이미지를 삽입했습니다.");
     } catch {
       toast.error("본문 이미지 업로드에 실패했습니다.");
@@ -174,20 +196,41 @@ export function PostForm({
     }
   }
 
-  function insertMarkdownImage(url: string, filename: string) {
-    const alt = filename.replace(/\.[^.]+$/, "");
-    const markdown = `\n![${alt}](${url})\n`;
+  function insertAtCursor(markdown: string, cursorOffset = markdown.length) {
     const textarea = contentRef.current;
-    const cursor = textarea?.selectionStart ?? values.content.length;
+    const start = textarea?.selectionStart ?? values.content.length;
+    const end = textarea?.selectionEnd ?? start;
     const nextContent =
-      values.content.slice(0, cursor) + markdown + values.content.slice(cursor);
+      values.content.slice(0, start) + markdown + values.content.slice(end);
 
     updateValue("content", nextContent);
+    setMarkdownTab("write");
+    window.requestAnimationFrame(() => {
+      const cursor = start + cursorOffset;
+      contentRef.current?.focus();
+      contentRef.current?.setSelectionRange(cursor, cursor);
+    });
+  }
+
+  function applyMarkdown(format: MarkdownFormat) {
+    const textarea = contentRef.current;
+    const start = textarea?.selectionStart ?? values.content.length;
+    const end = textarea?.selectionEnd ?? start;
+    const selected = values.content.slice(start, end);
+    const { markdown, selectionStart, selectionEnd } = markdownFor(
+      format,
+      selected,
+    );
+    const nextContent =
+      values.content.slice(0, start) + markdown + values.content.slice(end);
+
+    updateValue("content", nextContent);
+    setMarkdownTab("write");
     window.requestAnimationFrame(() => {
       contentRef.current?.focus();
       contentRef.current?.setSelectionRange(
-        cursor + markdown.length,
-        cursor + markdown.length,
+        start + selectionStart,
+        start + selectionEnd,
       );
     });
   }
@@ -217,33 +260,6 @@ export function PostForm({
             value={values.title}
           />
         </Field>
-        <Field label="Slug">
-          <div className="flex gap-2">
-            <input
-              className={inputClassName}
-              onChange={(event) => {
-                setSlugTouched(true);
-                updateValue("slug", event.target.value);
-              }}
-              placeholder="empty이면 제목 기반 자동 생성"
-              value={values.slug}
-            />
-            <Button
-              onClick={() => {
-                setSlugTouched(true);
-                updateValue("slug", slugify(values.title));
-              }}
-              type="button"
-              variant="outline"
-            >
-              <RefreshCw className="size-4" />
-              재생성
-            </Button>
-          </div>
-        </Field>
-      </div>
-
-      <div className="grid gap-4 md:grid-cols-2">
         <Field label="상태">
           <select
             className={inputClassName}
@@ -259,20 +275,21 @@ export function PostForm({
             ))}
           </select>
         </Field>
-        <Field label="카테고리">
-          <select
-            className={inputClassName}
-            onChange={(event) => updateValue("category", event.target.value)}
-            value={values.category}
-          >
-            {categories.map((category) => (
-              <option key={category.name} value={category.name}>
-                {category.name}
-              </option>
-            ))}
-          </select>
-        </Field>
       </div>
+
+      <Field label="카테고리">
+        <select
+          className={inputClassName}
+          onChange={(event) => updateValue("category", event.target.value)}
+          value={values.category}
+        >
+          {categories.map((category) => (
+            <option key={category.name} value={category.name}>
+              {category.name}
+            </option>
+          ))}
+        </select>
+      </Field>
 
       <Field label="요약">
         <textarea
@@ -282,79 +299,142 @@ export function PostForm({
         />
       </Field>
 
-      <div className="grid gap-4 md:grid-cols-2">
-        <Field label="Meta title">
-          <input
-            className={inputClassName}
-            onChange={(event) => updateValue("metaTitle", event.target.value)}
-            placeholder="비우면 제목 사용"
-            value={values.metaTitle}
-          />
-        </Field>
-        <Field label="Meta description">
-          <input
-            className={inputClassName}
-            onChange={(event) =>
-              updateValue("metaDescription", event.target.value)
-            }
-            placeholder="비우면 요약 사용"
-            value={values.metaDescription}
-          />
-        </Field>
-      </div>
+      <section className="rounded-lg border bg-card p-4">
+        <button
+          className="flex w-full items-center justify-between text-left text-sm font-medium"
+          onClick={() => setShowAdvanced((current) => !current)}
+          type="button"
+        >
+          <span>고급 옵션</span>
+          <span className="font-mono text-xs text-muted-foreground">
+            {showAdvanced ? "hide" : "show"}
+          </span>
+        </button>
+        {showAdvanced ? (
+          <div className="mt-4">
+            <Field label="Slug">
+              <div className="flex gap-2">
+                <input
+                  className={inputClassName}
+                  onChange={(event) => {
+                    setSlugTouched(true);
+                    updateValue("slug", event.target.value);
+                  }}
+                  placeholder="비우면 제목 기반 자동 생성"
+                  value={values.slug}
+                />
+                <Button
+                  onClick={() => {
+                    setSlugTouched(true);
+                    updateValue("slug", slugify(values.title));
+                  }}
+                  type="button"
+                  variant="outline"
+                >
+                  <RefreshCw className="size-4" />
+                  제목으로 맞추기
+                </Button>
+              </div>
+            </Field>
+          </div>
+        ) : null}
+      </section>
 
       <div className="rounded-lg border bg-card p-4">
         <div className="mb-3 flex items-center justify-between gap-3">
           <span className="text-sm font-medium">본문</span>
-          <div className="flex gap-2 md:hidden">
+          <div className="flex rounded-md border bg-background p-1">
             <button
-              className={tabClass(previewMode === "edit")}
-              onClick={() => setPreviewMode("edit")}
+              className={tabClass(markdownTab === "write")}
+              onClick={() => setMarkdownTab("write")}
               type="button"
             >
-              편집
+              Write
             </button>
             <button
-              className={tabClass(previewMode === "preview")}
-              onClick={() => setPreviewMode("preview")}
+              className={tabClass(markdownTab === "preview")}
+              onClick={() => setMarkdownTab("preview")}
               type="button"
             >
-              미리보기
+              Preview
             </button>
           </div>
         </div>
-        <div className="grid gap-4 md:grid-cols-2">
-          <textarea
-            className={cn(
-              `${inputClassName} min-h-[520px] resize-y py-3 font-mono text-sm leading-6`,
-              previewMode === "preview" && "hidden md:block",
-            )}
-            onChange={(event) => updateValue("content", event.target.value)}
-            ref={contentRef}
-            required
-            value={values.content}
-          />
-          <div
-            className={cn(
-              "min-h-[520px] overflow-auto rounded-md border bg-background p-4",
-              previewMode === "edit" && "hidden md:block",
-            )}
-          >
-            {values.content.trim() ? (
-              <MarkdownContent content={values.content} />
-            ) : (
-              <p className="font-mono text-sm text-muted-foreground">
-                preview
-              </p>
-            )}
-          </div>
-        </div>
-        <div className="mt-3 flex flex-wrap gap-3">
-          <UploadButton
-            disabled={isUploadingBodyImage}
-            label={isUploadingBodyImage ? "삽입 중..." : "본문 이미지 삽입"}
-            onFile={handleBodyImageUpload}
-          />
+        <div className="overflow-hidden rounded-md border bg-background">
+          {markdownTab === "write" ? (
+            <>
+              <div className="flex gap-1 overflow-x-auto border-b bg-muted/40 p-2">
+                <ToolbarButton
+                  icon={Heading2}
+                  label="H2"
+                  onClick={() => applyMarkdown("h2")}
+                />
+                <ToolbarButton
+                  icon={Heading3}
+                  label="H3"
+                  onClick={() => applyMarkdown("h3")}
+                />
+                <ToolbarButton
+                  icon={Bold}
+                  label="굵게"
+                  onClick={() => applyMarkdown("bold")}
+                />
+                <ToolbarButton
+                  icon={Link2}
+                  label="링크"
+                  onClick={() => applyMarkdown("link")}
+                />
+                <ToolbarButton
+                  icon={Code2}
+                  label="코드"
+                  onClick={() => applyMarkdown("inlineCode")}
+                />
+                <ToolbarButton
+                  icon={SquareCode}
+                  label="코드블록"
+                  onClick={() => applyMarkdown("codeBlock")}
+                />
+                <ToolbarButton
+                  icon={Quote}
+                  label="인용"
+                  onClick={() => applyMarkdown("quote")}
+                />
+                <ToolbarButton
+                  icon={List}
+                  label="목록"
+                  onClick={() => applyMarkdown("list")}
+                />
+                <ToolbarButton
+                  icon={Minus}
+                  label="구분선"
+                  onClick={() => applyMarkdown("divider")}
+                />
+                <UploadButton
+                  disabled={isUploadingBodyImage}
+                  label={isUploadingBodyImage ? "삽입 중..." : "이미지"}
+                  onFile={handleBodyImageUpload}
+                  size="sm"
+                />
+              </div>
+              <textarea
+                className="min-h-[560px] w-full resize-y bg-background px-3 py-3 font-mono text-sm leading-6 outline-none"
+                onChange={(event) => updateValue("content", event.target.value)}
+                ref={contentRef}
+                required
+                value={values.content}
+              />
+            </>
+          ) : (
+            <div className="min-h-[560px] overflow-auto p-4">
+              {values.content.trim() ? (
+                <MarkdownContent content={values.content} />
+              ) : (
+                <p className="font-mono text-sm text-muted-foreground">
+                  preview
+                </p>
+              )}
+            </div>
+          )}
         </div>
       </div>
 
@@ -453,10 +533,12 @@ function UploadButton({
   disabled,
   label,
   onFile,
+  size = "default",
 }: {
   disabled: boolean;
   label: string;
   onFile: (file: File | undefined) => void;
+  size?: "default" | "sm";
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -465,6 +547,7 @@ function UploadButton({
       <Button
         disabled={disabled}
         onClick={() => inputRef.current?.click()}
+        size={size}
         type="button"
         variant="outline"
       >
@@ -482,6 +565,29 @@ function UploadButton({
         type="file"
       />
     </>
+  );
+}
+
+function ToolbarButton({
+  icon: Icon,
+  label,
+  onClick,
+}: {
+  icon: typeof Heading2;
+  label: string;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      aria-label={label}
+      className="inline-flex h-8 shrink-0 items-center gap-1 rounded-md border bg-background px-2 text-xs text-foreground transition-colors hover:bg-accent"
+      onClick={onClick}
+      title={label}
+      type="button"
+    >
+      <Icon className="size-3.5" />
+      <span>{label}</span>
+    </button>
   );
 }
 
@@ -538,6 +644,61 @@ function tagOptions(tags: Tag[], selectedTags: string[]) {
   return [...options, ...missing];
 }
 
+function markdownFor(format: MarkdownFormat, selected: string) {
+  const text = selected || fallbackText(format);
+  switch (format) {
+    case "h2":
+      return selectedMarkdown(`\n## ${text}\n`, "\n## ", text);
+    case "h3":
+      return selectedMarkdown(`\n### ${text}\n`, "\n### ", text);
+    case "bold":
+      return selectedMarkdown(`**${text}**`, "**", text);
+    case "link":
+      return selectedMarkdown(`[${text}](https://example.com)`, "[", text);
+    case "inlineCode":
+      return selectedMarkdown(`\`${text}\``, "`", text);
+    case "codeBlock":
+      return selectedMarkdown(`\n\`\`\`\n${text}\n\`\`\`\n`, "\n```\n", text);
+    case "quote":
+      return selectedMarkdown(`\n> ${text}\n`, "\n> ", text);
+    case "list":
+      return selectedMarkdown(`\n- ${text}\n`, "\n- ", text);
+    case "divider":
+      return {
+        markdown: "\n---\n",
+        selectionStart: 5,
+        selectionEnd: 5,
+      };
+  }
+}
+
+function selectedMarkdown(markdown: string, prefix: string, text: string) {
+  return {
+    markdown,
+    selectionStart: prefix.length,
+    selectionEnd: prefix.length + text.length,
+  };
+}
+
+function fallbackText(format: MarkdownFormat) {
+  switch (format) {
+    case "h2":
+    case "h3":
+      return "제목";
+    case "link":
+      return "링크 텍스트";
+    case "inlineCode":
+    case "codeBlock":
+      return "code";
+    case "quote":
+      return "인용문";
+    case "list":
+      return "목록 항목";
+    default:
+      return "텍스트";
+  }
+}
+
 function slugify(value: string) {
   const slug = value
     .trim()
@@ -549,8 +710,8 @@ function slugify(value: string) {
 
 function tabClass(active: boolean) {
   return cn(
-    "rounded-md border px-3 py-1.5 text-xs",
-    active ? "bg-primary text-primary-foreground" : "bg-card",
+    "rounded px-3 py-1.5 text-xs transition-colors",
+    active ? "bg-card text-foreground shadow-sm" : "text-muted-foreground",
   );
 }
 
