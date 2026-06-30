@@ -61,7 +61,7 @@ export default function AdminPage() {
           <label className="block space-y-2">
             <span className="text-sm font-medium">Email</span>
             <input
-              className="h-10 w-full rounded-md border bg-background px-3 text-sm outline-none transition-colors focus:border-ring focus:ring-2 focus:ring-ring/20"
+              className="h-10 w-full rounded-md border border-[#bdb4a4] bg-[#fffdf7] px-3 text-sm shadow-[inset_0_1px_0_rgba(255,255,255,0.7)] outline-none transition-colors placeholder:text-muted-foreground focus:border-[#315f50] focus:ring-2 focus:ring-[#315f50]/15"
               name="email"
               onChange={(event) => setEmail(event.target.value)}
               placeholder="admin@example.com"
@@ -72,7 +72,7 @@ export default function AdminPage() {
           <label className="block space-y-2">
             <span className="text-sm font-medium">Password</span>
             <input
-              className="h-10 w-full rounded-md border bg-background px-3 text-sm outline-none transition-colors focus:border-ring focus:ring-2 focus:ring-ring/20"
+              className="h-10 w-full rounded-md border border-[#bdb4a4] bg-[#fffdf7] px-3 text-sm shadow-[inset_0_1px_0_rgba(255,255,255,0.7)] outline-none transition-colors placeholder:text-muted-foreground focus:border-[#315f50] focus:ring-2 focus:ring-[#315f50]/15"
               name="password"
               onChange={(event) => setPassword(event.target.value)}
               placeholder="********"

@@ -343,7 +343,7 @@ export function PostForm({
       <div className="rounded-lg border bg-card p-4">
         <div className="mb-3 flex items-center justify-between gap-3">
           <span className="text-sm font-medium">본문</span>
-          <div className="flex rounded-md border bg-background p-1">
+          <div className="flex rounded-md border border-[#bdb4a4] bg-[#f6f3eb] p-1">
             <button
               className={tabClass(markdownTab === "write")}
               onClick={() => setMarkdownTab("write")}
@@ -360,10 +360,10 @@ export function PostForm({
             </button>
           </div>
         </div>
-        <div className="overflow-hidden rounded-md border bg-background">
+        <div className="overflow-hidden rounded-md border border-[#bdb4a4] bg-[#fffdf7]">
           {markdownTab === "write" ? (
             <>
-              <div className="flex gap-1 overflow-x-auto border-b bg-muted/40 p-2">
+              <div className="flex gap-1 overflow-x-auto border-b border-[#d7d0c1] bg-[#f6f3eb] p-2">
                 <ToolbarButton
                   icon={Heading2}
                   label="H2"
@@ -417,7 +417,7 @@ export function PostForm({
                 />
               </div>
               <textarea
-                className="min-h-[560px] w-full resize-y bg-background px-3 py-3 font-mono text-sm leading-6 outline-none"
+                className="min-h-[560px] w-full resize-y bg-[#fffdf7] px-3 py-3 font-mono text-sm leading-6 outline-none"
                 onChange={(event) => updateValue("content", event.target.value)}
                 ref={contentRef}
                 required
@@ -439,7 +439,7 @@ export function PostForm({
       </div>
 
       <Field label="태그">
-        <div className="flex flex-wrap gap-2 rounded-md border bg-background p-3">
+        <div className="flex flex-wrap gap-2 rounded-md border border-[#bdb4a4] bg-[#fffdf7] p-3">
           {tags.map((tag) => (
             <button
               className={cn(
@@ -580,7 +580,7 @@ function ToolbarButton({
   return (
     <button
       aria-label={label}
-      className="inline-flex h-8 shrink-0 items-center gap-1 rounded-md border bg-background px-2 text-xs text-foreground transition-colors hover:bg-accent"
+      className="inline-flex h-8 shrink-0 items-center gap-1 rounded-md border border-[#cbc3b4] bg-[#fffdf7] px-2 text-xs text-foreground transition-colors hover:bg-[#f0eadf]"
       onClick={onClick}
       title={label}
       type="button"
@@ -716,4 +716,4 @@ function tabClass(active: boolean) {
 }
 
 const inputClassName =
-  "w-full rounded-md border bg-background px-3 py-2 text-sm outline-none transition-colors focus:border-ring focus:ring-2 focus:ring-ring/20";
+  "w-full rounded-md border border-[#bdb4a4] bg-[#fffdf7] px-3 py-2 text-sm shadow-[inset_0_1px_0_rgba(255,255,255,0.7)] outline-none transition-colors placeholder:text-muted-foreground focus:border-[#315f50] focus:ring-2 focus:ring-[#315f50]/15";
