@@ -94,21 +94,17 @@ export async function getAdminMe() {
 }
 
 export type DependencyStatus = {
-  name: "mysql" | "adw" | "ajd";
+  name: "soda";
   configured: boolean;
   ok: boolean;
   latencyMs?: number;
-  host?: string;
-  port?: number;
-  database?: string;
-  service?: string;
+  endpoint?: string;
+  collection?: string;
   error?: string;
 };
 
 export type DependenciesReport = {
-  mysql: DependencyStatus;
-  adw: DependencyStatus;
-  ajd: DependencyStatus;
+  soda: DependencyStatus;
 };
 
 export async function getAdminDependencies() {

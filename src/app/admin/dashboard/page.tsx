@@ -267,13 +267,7 @@ function DependenciesPanel({
   onRefresh: () => void;
   report?: DependenciesReport;
 }) {
-  const dependencies = report
-    ? [
-        ["MySQL", report.mysql],
-        ["ADW", report.adw],
-        ["JSON DB", report.ajd],
-      ] as const
-    : [];
+  const dependencies = report ? [["SODA REST", report.soda]] as const : [];
 
   return (
     <section className="mb-10 space-y-4">
@@ -299,12 +293,12 @@ function DependenciesPanel({
         </div>
       ) : null}
 
-      <div className="grid gap-3 md:grid-cols-3">
+      <div className="grid gap-3 md:grid-cols-1">
         {dependencies.length > 0
           ? dependencies.map(([label, dependency]) => (
               <DependencyCard dependency={dependency} key={label} label={label} />
             ))
-          : ["MySQL", "ADW", "JSON DB"].map((label) => (
+          : ["SODA REST"].map((label) => (
               <DependencySkeleton isFetching={isFetching} key={label} label={label} />
             ))}
       </div>
@@ -320,7 +314,7 @@ function DependencyCard({
   label: string;
 }) {
   const state = getDependencyState(dependency);
-  const detail = dependency.database || dependency.service || "-";
+  const detail = dependency.collection || "-";
 
   return (
     <article className="rounded-lg border bg-card p-4">
@@ -328,7 +322,7 @@ function DependencyCard({
         <div>
           <h3 className="font-medium">{label}</h3>
           <p className="mt-1 text-sm text-muted-foreground">
-            {dependency.host || "-"}:{dependency.port || "-"}
+            {dependency.endpoint || "-"}
           </p>
         </div>
         <span
@@ -344,7 +338,7 @@ function DependencyCard({
       <dl className="mt-4 space-y-2 text-sm">
         <div className="flex justify-between gap-3">
           <dt className="text-muted-foreground">
-            {dependency.database ? "Database" : "Service"}
+            Collection
           </dt>
           <dd className="truncate font-medium">{detail}</dd>
         </div>
