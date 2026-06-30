@@ -108,7 +108,7 @@ export default function PostDetailPage() {
         </div>
       </header>
 
-      <article className="mx-auto w-full max-w-3xl px-5 py-10">
+      <article className="mx-auto w-full max-w-5xl px-5 py-10">
         <PostHero
           liked={liked}
           liking={likeMutation.isPending}
@@ -127,7 +127,7 @@ export default function PostDetailPage() {
       </article>
 
       <section className="border-t border-[#d7d0c1] bg-[#f0eadf]/80">
-        <div className="mx-auto w-full max-w-3xl px-5 py-10">
+        <div className="mx-auto w-full max-w-5xl px-5 py-10">
           <div className="mb-6 flex items-center gap-2">
             <MessageCircle className="size-5 text-[#315f50]" />
             <h2 className="text-2xl font-semibold text-[#24211b]">
