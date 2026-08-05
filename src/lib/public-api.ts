@@ -27,7 +27,7 @@ export async function fetchPublishedPosts() {
 }
 
 export async function fetchPublishedPost(slug: string) {
-  return publicFetch<Post>(`/api/v1/posts/${encodeURIComponent(slug)}`);
+  return publicFetch<Post>(`/api/v1/posts/${slug}`);
 }
 
 export async function fetchCategories() {
