@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
 import { PostDetailClient } from "@/app/posts/[slug]/post-detail-client";
-import { fetchPublishedPost, postUrl, SITE_URL } from "@/lib/public-api";
+import { fetchPublishedPost, fetchTags, postUrl, SITE_URL } from "@/lib/public-api";
 
 export async function generateMetadata({
   params,
@@ -54,6 +54,7 @@ export default async function PostPage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
+  const tagsPromise = fetchTags().catch(() => []);
   let post;
   try {
     post = await fetchPublishedPost(slug);
@@ -61,5 +62,6 @@ export default async function PostPage({
     notFound();
   }
 
-  return <PostDetailClient initialPost={post} slug={slug} />;
+  const tags = await tagsPromise;
+  return <PostDetailClient initialPost={post} initialTags={tags} slug={slug} />;
 }

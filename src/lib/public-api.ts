@@ -7,6 +7,12 @@ export const SITE_URL =
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:8080";
 
+export class PublicApiError extends Error {
+  constructor(public status: number, path: string) {
+    super(`Public API request failed: ${path}`);
+  }
+}
+
 async function publicFetch<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(`${API_BASE_URL}${path}`, {
     ...init,
@@ -14,7 +20,7 @@ async function publicFetch<T>(path: string, init?: RequestInit): Promise<T> {
   });
 
   if (!response.ok) {
-    throw new Error(`Public API request failed: ${path}`);
+    throw new PublicApiError(response.status, path);
   }
 
   return response.json() as Promise<T>;

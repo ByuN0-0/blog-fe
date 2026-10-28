@@ -9,7 +9,7 @@ export function MarkdownContent({ content }: MarkdownContentProps) {
   const blocks = toBlocks(content);
 
   return (
-    <div className="space-y-5 text-[17px] leading-8 text-[#352d22]">
+    <div className="blog-prose space-y-5 text-[17px] leading-8 text-[#352d22]">
       {blocks.map((block, index) => {
         if (block.type === "heading") {
           const Heading = `h${block.level}` as "h2" | "h3";
@@ -25,12 +25,15 @@ export function MarkdownContent({ content }: MarkdownContentProps) {
 
         if (block.type === "image") {
           return (
-            <figure key={index}>
+            <figure className="blog-prose-wide" key={index}>
+              <a href={block.src} target="_blank" rel="noopener noreferrer" aria-label={`${block.alt || "본문 이미지"} 원본 보기 (새 탭)`}>
               <img
                 alt={block.alt}
-                className="max-h-[560px] w-full rounded-md border border-[#d7d0c1] object-cover"
+                className="mx-auto block h-auto max-w-full rounded-md"
                 src={block.src}
+                loading="lazy"
               />
+              </a>
               {block.alt ? (
                 <figcaption className="mt-2 text-center font-mono text-xs text-[#6f685d]">
                   {block.alt}
@@ -43,7 +46,7 @@ export function MarkdownContent({ content }: MarkdownContentProps) {
         if (block.type === "code") {
           return (
             <pre
-              className="overflow-x-auto rounded-md border border-[#3b3831] bg-[#24211b] p-4 font-mono text-sm leading-6 text-[#f6f3eb]"
+              className="blog-prose-wide overflow-x-auto rounded-md border border-[#3b3831] bg-[#24211b] p-4 font-mono text-sm leading-6 text-[#f6f3eb]"
               key={index}
             >
               <code>{block.value}</code>
@@ -77,7 +80,7 @@ export function MarkdownContent({ content }: MarkdownContentProps) {
         if (block.type === "quote") {
           return (
             <blockquote
-              className="border-l-4 border-[#8c8170] bg-[#f0eadf] px-4 py-3 italic text-[#5f5a50]"
+              className="border-l border-[#8c8170] bg-[#f0eadf] px-4 py-3 italic text-[#5f5a50]"
               key={index}
             >
               {renderInline(block.value)}
@@ -91,7 +94,7 @@ export function MarkdownContent({ content }: MarkdownContentProps) {
 
         if (block.type === "table") {
           return (
-            <div className="overflow-x-auto" key={index}>
+            <div className="blog-prose-wide overflow-x-auto" key={index}>
               <table className="w-full border-collapse text-left text-sm">
                 <tbody>
                   {block.rows.map((row, rowIndex) => (
